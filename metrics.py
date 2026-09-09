@@ -15,12 +15,22 @@ def is_recovered(
     reference_ratio: float = 0.95,
 ) -> bool:
     """Gap≤5%p이면서 neutral 정확도가 reference의 95% 이상인지 판정한다."""
-    return gap <= gap_threshold and neutral_accuracy >= reference_ratio * reference_accuracy
+    return (
+        gap <= gap_threshold
+        and neutral_accuracy >= reference_ratio * reference_accuracy
+    )
 
 
-def recovery_time(rows: list[dict], reference_accuracy: float, **thresholds) -> int | None:
+def recovery_time(
+    rows: list[dict], reference_accuracy: float, **thresholds
+) -> int | None:
     """최초 회복 epoch. 끝까지 미회복이면 censored를 뜻하는 None을 반환한다."""
     for row in sorted(rows, key=lambda item: item["recovery_epoch"]):
-        if is_recovered(row["shortcut_gap"], row["neutral_accuracy"], reference_accuracy, **thresholds):
+        if is_recovered(
+            row["shortcut_gap"],
+            row["neutral_accuracy"],
+            reference_accuracy,
+            **thresholds,
+        ):
             return int(row["recovery_epoch"])
     return None
