@@ -5,15 +5,22 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-transform = transforms.Compose([
-    transforms.ToTensor(),  # [0,255] -> [0,1]
-])
+transform = transforms.Compose(
+    [
+        transforms.ToTensor(),  # [0,255] -> [0,1]
+    ]
+)
 
-train_set = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-test_set = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+train_set = torchvision.datasets.MNIST(
+    root="./data", train=True, download=True, transform=transform
+)
+test_set = torchvision.datasets.MNIST(
+    root="./data", train=False, download=True, transform=transform
+)
 
 train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=64, shuffle=False)
+
 
 class CNN(nn.Module):
     def __init__(self):
@@ -21,17 +28,13 @@ class CNN(nn.Module):
         self.conv_layer = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),  # [1,28,28] -> [32,28,28]
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),                          # -> [32,14,14]
-
-            nn.Conv2d(32, 64, kernel_size=3, padding=1), # -> [64,14,14]
+            nn.MaxPool2d(2, 2),  # -> [32,14,14]
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),  # -> [64,14,14]
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)                           # -> [64,7,7]
+            nn.MaxPool2d(2, 2),  # -> [64,7,7]
         )
         self.fc_layer = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(64 * 7 * 7, 128),
-            nn.ReLU(),
-            nn.Linear(128, 10) 
+            nn.Flatten(), nn.Linear(64 * 7 * 7, 128), nn.ReLU(), nn.Linear(128, 10)
         )
 
     def forward(self, x):
@@ -39,9 +42,10 @@ class CNN(nn.Module):
         x = self.fc_layer(x)
         return x
 
+
 model = CNN()
 
-criterion = nn.CrossEntropyLoss() 
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 for epoch in range(5):
