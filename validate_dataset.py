@@ -1,70 +1,80 @@
-"""데이터 통제 조건을 검사하고 확인용 그림을 파일로 저장한다."""
+"""3·8 Spurious Colored MNIST의 상관관계와 시각화를 검증한다."""
 
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")  # VS Code 터미널/CI에서도 창 없이 저장 가능
-import matplotlib.pyplot as plt
 import torch
 
-from dataset import ColoredMNIST, load_mnist, make_biased_color_ids, make_hue_offsets, make_neutral_color_ids, split_train_validation, subset_labels
+from dataset import (
+    SpuriousColoredMNIST,
+    label_color_distribution,
+    load_digit38_mnist,
+    make_biased_color_ids,
+    make_hue_offsets,
+    make_neutral_color_ids,
+    split_train_validation,
+    spurious_correlation,
+    subset_labels,
+    visualize_label_color_heatmap,
+    visualize_random_samples,
+    visualize_same_image_both_colors,
+)
 
 
 def main() -> None:
     seed, p = 42, 0.99
-    output = Path("validation_outputs")
-    output.mkdir(exist_ok=True)
-    mnist, _ = load_mnist(download=False)
-    train_subset, _ = split_train_validation(mnist, seed)
+    output = Path("validation_outputs_38")
+
+    digit_train, digit_test = load_digit38_mnist(download=False)
+    train_subset, validation_subset = split_train_validation(digit_train, seed)
     labels = subset_labels(train_subset)
-    offsets = make_hue_offsets(len(mnist), seed)
-    biased_ids = make_biased_color_ids(labels, p, seed)
-    neutral_ids = make_neutral_color_ids(labels, seed + 10_000)
-    biased = ColoredMNIST(train_subset, biased_ids, offsets)
-    neutral = ColoredMNIST(train_subset, neutral_ids, offsets)
 
-    matrix = torch.stack([
-        neutral_ids[labels == y].bincount(minlength=10).float() / (labels == y).sum()
-        for y in range(10)
-    ])
-    biased_p = (biased_ids == labels).float().mean().item()
-    neutral_p = (neutral_ids == labels).float().mean().item()
-    sample, _, _, _ = biased[0]
+    # 공식 MNIST 원본 index 기준 offset을 biased/neutral 조건이 공유한다.
+    hue_offsets = make_hue_offsets(len(digit_train.mnist), seed)
+    biased_ids = make_biased_color_ids(labels, p=p, seed=seed)
+    neutral_ids = make_neutral_color_ids(labels, seed=seed + 10_000)
+    biased_dataset = SpuriousColoredMNIST(train_subset, biased_ids, hue_offsets)
+
+    biased_matrix = label_color_distribution(labels, biased_ids)
+    neutral_matrix = label_color_distribution(labels, neutral_ids)
+    actual_p = (biased_ids == labels).float().mean().item()
+    biased_corr = spurious_correlation(labels, biased_ids)
+    neutral_corr = spurious_correlation(labels, neutral_ids)
+    sample = biased_dataset[0][0]
+
+    assert set(labels.tolist()) == {3, 8}
     assert sample.shape == (3, 28, 28)
-    assert offsets.min() >= -5 and offsets.max() <= 5
-    assert abs(biased_p - p) < 0.001
-    assert torch.all((matrix - 0.1).abs() < 0.001)
+    assert hue_offsets.min() >= -5 and hue_offsets.max() <= 5
+    assert abs(actual_p - p) < 0.001
+    assert torch.all((neutral_matrix - 0.5).abs() < 0.001)
 
-    generator = torch.Generator().manual_seed(seed)
-    random_indices = torch.randperm(len(biased), generator=generator)[:20]
-    fig, axes = plt.subplots(4, 5, figsize=(10, 8))
-    for ax, idx in zip(axes.flat, random_indices.tolist()):
-        image, label, color_id, hue = biased[idx]
-        ax.imshow(image.permute(1, 2, 0))
-        ax.set_title(f"label={label}, color={color_id}\nH={hue:.1f}°", fontsize=8)
-        ax.axis("off")
-    fig.tight_layout()
-    fig.savefig(output / "biased_samples.png", dpi=150)
-    plt.close(fig)
+    print("=== Digit 3/8 Spurious Colored MNIST ===")
+    print(f"official train 3/8={len(digit_train)}, official test 3/8={len(digit_test)}")
+    print(f"train={len(train_subset)}, validation={len(validation_subset)}")
+    print(f"digit counts: 3={(labels == 3).sum().item()}, 8={(labels == 8).sum().item()}")
+    print(f"biased actual p={actual_p:.6f}")
+    print(f"biased correlation(phi)={biased_corr:.6f}")
+    print(f"neutral correlation(phi)={neutral_corr:.6f}")
+    print(f"biased matrix:\n{biased_matrix}")
+    print(f"neutral matrix:\n{neutral_matrix}")
+    print(f"RGB tensor shape={tuple(sample.shape)}")
+    print(f"Hue offset range={hue_offsets.min():.6f}..{hue_offsets.max():.6f}")
 
-    fig, ax = plt.subplots(figsize=(8, 7))
-    plot = ax.imshow(matrix.numpy(), vmin=0, vmax=0.2)
-    ax.set(xlabel="Color ID", ylabel="Digit Label", title="Neutral label-color distribution")
-    ax.set_xticks(range(10)); ax.set_yticks(range(10))
-    for y in range(10):
-        for color_id in range(10):
-            ax.text(color_id, y, f"{matrix[y, color_id]:.3f}", ha="center", va="center", fontsize=7)
-    fig.colorbar(plot, ax=ax, label="Ratio")
-    fig.tight_layout()
-    fig.savefig(output / "neutral_heatmap.png", dpi=150)
-    plt.close(fig)
-
-    print(f"total official train={len(mnist)}, pilot train={len(train_subset)}")
-    print(f"biased actual p={biased_p:.6f}")
-    print(f"neutral label==color ratio={neutral_p:.6f}")
-    print(f"neutral matrix range={matrix.min().item():.6f}..{matrix.max().item():.6f}")
-    print(f"tensor shape={tuple(sample.shape)}")
-    print(f"hue offset range={offsets.min().item():.6f}..{offsets.max().item():.6f}")
+    # PNG 저장과 화면 표시를 함께 수행한다. 창을 닫으면 다음 창이 열린다.
+    visualize_random_samples(
+        biased_dataset, output / "biased_samples_38.png", seed=seed, show=True
+    )
+    visualize_label_color_heatmap(
+        labels, biased_ids, output / "biased_heatmap_38.png", show=True,
+        title=f"Biased digit-color distribution (p={p})",
+    )
+    visualize_label_color_heatmap(
+        labels, neutral_ids, output / "neutral_heatmap_38.png", show=True,
+        title="Neutral digit-color distribution (p=0.5)",
+    )
+    visualize_same_image_both_colors(
+        train_subset, hue_offsets,
+        output_path=output / "same_image_both_colors.png", show=True,
+    )
     print(f"figures={output.resolve()}")
 
 
