@@ -109,7 +109,7 @@
 #     main()
 #
 
-"""숫자 3·8 BinarySmallCNN: biased 데이터로 정확히 1 epoch 학습하는 pilot."""
+"""숫자 3·8 BinarySmallCNN: 지정한 exposure epoch 동안 학습하는 pilot."""
 
 from __future__ import annotations
 
@@ -137,6 +137,11 @@ from model import BinarySmallCNN
 from train import evaluate_binary, train_one_epoch
 
 
+# 학습 횟수 설정: 예를 들어 5로 바꾸면 같은 모델을 연속 5 epoch 학습한다.
+# 상단의 주석 처리된 0~9 코드가 아니라 이 값을 변경하면 된다.
+exposure_epoch = 1
+
+
 def seed_everything(seed: int) -> None:
     """모델 초기화와 학습 순서를 고정한다. 같은 환경에서의 재현을 목표로 한다."""
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
@@ -161,7 +166,9 @@ def unique_run_dir(root: Path, name: str) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="3·8 binary CNN 1 epoch pilot")
+    parser = argparse.ArgumentParser(description="3·8 binary CNN exposure pilot")
+    parser.add_argument("--exposure-epoch", type=int, default=exposure_epoch,
+                        help="전체 학습 epoch 수 (코드의 exposure_epoch 설정을 덮어씀)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--p", type=float, default=0.99)
     parser.add_argument("--batch-size", type=int, default=64)
@@ -172,6 +179,8 @@ def main() -> None:
     parser.add_argument("--download", action="store_true", help="원본 MNIST가 없을 때 다운로드")
     parser.add_argument("--output", type=Path, default=Path("pilot_results_38"))
     args = parser.parse_args()
+    if args.exposure_epoch < 1:
+        parser.error("exposure-epoch는 1 이상이어야 합니다.")
     if not 0.5 <= args.p <= 1.0:
         parser.error("p는 0.5 이상 1 이하이어야 합니다.")
     if args.batch_size < 1 or args.num_workers < 0:
@@ -211,28 +220,18 @@ def main() -> None:
         "model_class": "BinarySmallCNN", "digits": [3, 8],
         "target_mapping": {"3": 0, "8": 1}, "color_ids": [3, 8],
         "hue_jitter_degrees": 5, "learning_rate": 0.001,
-        "optimizer": "Adam", "loss": "CrossEntropyLoss", "exposure_epochs": 1,
+        "optimizer": "Adam", "loss": "CrossEntropyLoss", "exposure_epochs": args.exposure_epoch,
         "device": str(device), "torch_version": str(torch.__version__),
         "flip_rate_definition": "fraction of images whose predictions change between two colors",
     }
-    run_dir = unique_run_dir(args.output, f"binary_p{args.p:g}_seed{args.seed}_exp01")
+    run_dir = unique_run_dir(
+        args.output, f"binary_p{args.p:g}_seed{args.seed}_exp{args.exposure_epoch:02d}"
+    )
     (run_dir / "config.json").write_text(
         json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"BinarySmallCNN | train={len(train_subset)}, validation={len(val_subset)}, device={device}",
           flush=True)
-    # 반복문 없이 정확히 1 epoch만 학습한다. neutral은 배정 저장만 하며 회복 학습은 하지 않는다.
-    train_loss, train_accuracy = train_one_epoch(model, train_loader, optimizer, device)
-    result = {
-        "seed": args.seed, "p": args.p, "exposure_epoch": 1,
-        "train_loss": train_loss, "train_accuracy": train_accuracy,
-        **evaluate_binary(model, aligned_loader, conflict_loader, device),
-    }
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "config": config, "metrics": result,
-    }, run_dir / "exposure_01.pt")
     # 배정 tensor는 subset 순서 기준이므로 실제 원본 index도 함께 저장한다.
     torch.save({
         "train_original_indices": digit_train.original_indices[train_subset.indices],
@@ -242,16 +241,40 @@ def main() -> None:
         "validation_aligned_color_ids": aligned_ids,
         "validation_conflict_color_ids": conflict_ids,
     }, run_dir / "assignments.pt")
-    (run_dir / "result.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    print(f"actual p={(biased_ids == train_labels).float().mean().item():.6f}", flush=True)
+    print(f"total exposure epochs={args.exposure_epoch}", flush=True)
+    print(f"saved={run_dir.resolve()}", flush=True)
+
+    # 모델, optimizer, 색 배정은 반복문 밖에서 한 번만 생성한다.
+    # 매 epoch 이전 학습 상태를 이어가며, neutral recovery는 수행하지 않는다.
     with (run_dir / "results.csv").open("w", newline="", encoding="utf-8-sig") as handle:
-        writer = csv.DictWriter(handle, fieldnames=result.keys())
-        writer.writeheader()
-        writer.writerow(result)
-    print(f"actual p={(biased_ids == train_labels).float().mean().item():.6f}")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    print(f"saved={run_dir.resolve()}")
+        writer = None
+        for epoch in range(1, args.exposure_epoch + 1):
+            train_loss, train_accuracy = train_one_epoch(model, train_loader, optimizer, device)
+            result = {
+                "seed": args.seed, "p": args.p, "exposure_epoch": epoch,
+                "train_loss": train_loss, "train_accuracy": train_accuracy,
+                **evaluate_binary(model, aligned_loader, conflict_loader, device),
+            }
+            # 학습 + validation 평가가 끝날 때마다 즉시 화면에 출력한다.
+            print(f"\n[Epoch {epoch}/{args.exposure_epoch}]", flush=True)
+            print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
+
+            # epoch별 weight와 Adam 상태를 각각 보관한다.
+            torch.save({
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "config": config, "metrics": result,
+            }, run_dir / f"exposure_{epoch:02d}.pt")
+            if writer is None:
+                writer = csv.DictWriter(handle, fieldnames=result.keys())
+                writer.writeheader()
+            writer.writerow(result)
+            handle.flush()  # 다음 epoch 도중 중단돼도 완료된 epoch의 행은 남긴다.
+            # 기존 파일 형식과 호환되도록 result.json은 가장 최근 완료된 epoch 결과를 저장한다.
+            (run_dir / "result.json").write_text(
+                json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
 
 
 if __name__ == "__main__":

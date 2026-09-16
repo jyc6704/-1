@@ -1,0 +1,12 @@
+{
+  "seed": 42,
+  "p": 0.99,
+  "exposure_epoch": 2,
+  "train_loss": 0.03549552973707248,
+  "train_accuracy": 0.9902983517629876,
+  "aligned_accuracy": 1.0,
+  "conflict_accuracy": 0.18697829716193656,
+  "neutral_accuracy": 0.5934891485809682,
+  "shortcut_gap": 0.8130217028380634,
+  "flip_rate": 0.8130217028380634
+}

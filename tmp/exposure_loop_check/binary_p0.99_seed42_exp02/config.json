@@ -1,0 +1,32 @@
+{
+  "exposure_epoch": 2,
+  "seed": 42,
+  "p": 0.99,
+  "batch_size": 64,
+  "val_ratio": 0.2,
+  "num_workers": 0,
+  "data_root": "C:\\Users\\정유찬\\OneDrive\\바탕 화면\\과제연구1\\data",
+  "download": false,
+  "output": "tmp\\exposure_loop_check",
+  "model_class": "BinarySmallCNN",
+  "digits": [
+    3,
+    8
+  ],
+  "target_mapping": {
+    "3": 0,
+    "8": 1
+  },
+  "color_ids": [
+    3,
+    8
+  ],
+  "hue_jitter_degrees": 5,
+  "learning_rate": 0.001,
+  "optimizer": "Adam",
+  "loss": "CrossEntropyLoss",
+  "exposure_epochs": 2,
+  "device": "cpu",
+  "torch_version": "2.13.0+cpu",
+  "flip_rate_definition": "fraction of images whose predictions change between two colors"
+}
