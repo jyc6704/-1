@@ -1,6 +1,65 @@
 # -1
 과제연구1
 
+## Shortcut recovery 본 실험
+
+`recovery_experiment.py`는 기존 pilot의 데이터·CNN·학습·평가 함수를 재사용해
+편향 exposure 이후 중립 데이터로 이어 학습합니다. 기존 `pilot.py`는 그대로입니다.
+
+```powershell
+python -m pip install -r requirements.txt
+python recovery_experiment.py
+# MNIST가 없을 때
+python recovery_experiment.py --download
+# 먼저 작은 실행으로 검증
+python recovery_experiment.py --seeds 42 --p-values .99 --recovery-epochs 2
+# CPU 스레드 수를 명시하려면
+python recovery_experiment.py --device cpu --num-threads 4
+# 다운로드 없는 프로토콜 회귀 테스트
+python -m unittest test_recovery_experiment test_recovery_metrics
+```
+
+기본값은 숫자 3/8, 공식 train의 **40/40/20 exposure/recovery/validation 분할**,
+seeds 42/43/44, p=.50/.90/.99, exposure 1 epoch, recovery 10 epochs입니다.
+BinarySmallCNN, Adam(lr=.001), batch size 64, CrossEntropyLoss, hue ±5°를 사용합니다.
+공식 test는 기존 로더가 읽지만 학습·validation에는 사용하지 않습니다.
+exposure 직후를 recovery epoch 0으로 평가하고, 모델 가중치를 유지한 채 새 Adam을
+만듭니다. p=.50도 동일한 순서를 따릅니다. Early stopping은 없습니다.
+
+같은 seed의 p 조건은 원본 split, 초기 CNN, hue, validation 순서, 학습 batch 순서를
+공유합니다. recovery 색 배정은 `base_seed + 10000 + epoch`으로 매 epoch 새로 생성하고
+각 digit 안에서 두 색이 50:50(홀수 개일 때 최대 한 개 차이)이 되게 합니다.
+Recovery shuffle seed는 `base_seed + 20000 + epoch`입니다. 전체 epoch의 색 배정을
+미리 검증해 저장하고 해당 epoch에서 사용하므로 p 실행 순서에 의존하지 않습니다.
+
+본 실험의 **Recovery Score**는 다음과 같은 연구 자체의 composite metric입니다.
+
+`neutral_accuracy * (1 - abs(shortcut_gap)) * (1 - flip_rate)`
+
+표준 문헌 지표나 회복 백분율이 아닙니다. 0.8을 “80% 회복”으로 해석하지 않습니다.
+아래의 기존 `recovery_metrics.py` M/Q 분석·기준 모델 대비 회복률과도 다른 지표입니다.
+
+매 실행마다 `recovery_results_38/run_날짜_시간/` 아래 새 폴더가 만들어집니다.
+
+- `config.json`: 조건, seed 일정, 라이브러리·실행 환경, 표준편차 정의.
+- `raw_results.csv`: `(seed, p, recovery_epoch)`별 지표와 학습 결과. 기본 99행.
+  epoch 0의 recovery 학습 값은 빈칸입니다. 매 평가 직후 디스크에 저장합니다.
+- `summary_results.csv`: `(p, recovery_epoch)`별 7개 평가 지표의 평균·표본 SD(`ddof=1`).
+  기본 33행이며 `num_seeds`도 기록합니다. 단일 seed의 SD는 빈칸입니다.
+- `split_indices.pt`: seed별 공식 MNIST 원본 index. 이미지 자체를 복제하지 않습니다.
+- `assignments/`: seed별 공통 hue·epoch별 중립 색·평가 색·seed 정보·초기 가중치 해시와
+  각 p의 exposure 색 배정.
+- `checkpoints/`: 각 조건의 epoch 0 및 마지막 epoch 모델·config·seed·p·지표.
+- `plots/`: Recovery Score, 절대 Shortcut Gap, Flip Rate, Neutral Accuracy의
+  평균 ±1 표본 SD error bar 그래프. signed gap은 CSV에 보존합니다.
+  단일 seed 검증에서는 SD를 0으로 꾸미지 않고 error bar 없이 표시합니다.
+- `status.json`: 실행 상태와 완료된 평가 수. 실패하면 `failed`와 오류를 기록하고
+  이미 완료된 raw/summary 행은 남깁니다. 실패한 실행은 자동 이어하기를 지원하지 않습니다.
+
+재현성은 같은 라이브러리·장치 환경을 기준으로 합니다. split 무중복/전체 포함,
+색 분포, epoch별 재배정 및 재생성 일치, 동일 초기 가중치, optimizer reset,
+validation 원본·hue 공유, 지표 범위를 검사하며 실패 시 오류를 발생시킵니다.
+
 ## 현재 실험: 3·8 binary pilot
 
 `python pilot.py`로 BinarySmallCNN을 p=0.99 biased 데이터에서 학습합니다.

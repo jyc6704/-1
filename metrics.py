@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+import math
+
+
+def recovery_score(
+    neutral_accuracy: float, shortcut_gap: float, flip_rate: float
+) -> float:
+    """Study-defined composite index, not a standard metric or percent recovered."""
+    for name, value, lower in (
+        ("neutral_accuracy", neutral_accuracy, 0.0),
+        ("shortcut_gap", shortcut_gap, -1.0),
+        ("flip_rate", flip_rate, 0.0),
+    ):
+        if not math.isfinite(value) or not lower <= value <= 1.0:
+            raise ValueError(f"{name} must be finite and in [{lower}, 1].")
+    return neutral_accuracy * (1.0 - abs(shortcut_gap)) * (1.0 - flip_rate)
+
 
 def shortcut_gap(aligned_accuracy: float, conflict_accuracy: float) -> float:
     return aligned_accuracy - conflict_accuracy

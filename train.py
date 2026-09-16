@@ -76,6 +76,8 @@ def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str,
 
     if aligned_loader.dataset.subset is not conflict_loader.dataset.subset:
         raise ValueError("두 평가 조건은 동일한 validation subset을 사용해야 합니다.")
+    if not torch.equal(aligned_loader.dataset.hue_offsets, conflict_loader.dataset.hue_offsets):
+        raise ValueError("두 평가 조건은 동일한 hue offset을 사용해야 합니다.")
     if not all(isinstance(loader.sampler, SequentialSampler)
                for loader in (aligned_loader, conflict_loader)):
         raise ValueError("평가 DataLoader는 shuffle=False여야 합니다.")
