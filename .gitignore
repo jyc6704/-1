@@ -8,3 +8,12 @@ cnn_results_38/
 pilot_results*/
 validation_outputs*/
 recovery_results*/
+
+# Full experiment artifacts are intentionally versionable, including checkpoints.
+!experiment_results/
+!experiment_results/**
+experiment_results/**/*.tmp
+experiment_results/**/*.lock
+experiment_results/**/.experiment.lock
+experiment_results/smoke*/
+experiment_results/test*/

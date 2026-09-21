@@ -1,7 +1,28 @@
 # -1
 과제연구1
 
-## Shortcut recovery 본 실험
+## 10-class 회복 실험: 한 번에 실행
+
+현재 제출용 실험 진입점은 **`experiment.py`**입니다. MNIST와 EMNIST Digits를 각각
+학습하고, 원본 이미지·라벨, 모든 평가 예측, 가공 CSV, PNG/SVG 도표와 분석 자료를
+`experiment_results/full/`에 저장합니다.
+
+```powershell
+python -m pip install -r requirements-experiment.txt
+python experiment.py
+# 결과 검산 후 GitHub 업로드까지 수행하려면 위 실행 대신:
+python experiment.py --publish
+```
+
+기본 설정은 2개 데이터셋 × p=.10/.70/.80/.90/.99 × seeds 42/43/44 = **30개 학습 경로**,
+노출 2 epoch + 회복 10 epoch입니다. 같은 명령으로 재실행하면 저장 지점부터 이어갑니다.
+완료 후 `experiment_results/full/analysis_brief.md`를 열면 핵심 수치와 분석 파일을 볼 수 있습니다.
+GPU가 있으면 자동 사용하고, Windows에서는 실행 중 유휴 절전을 방지합니다.
+
+설치·작은 사전 실행·중단 복구·저장 파일·지표 정의·업로드 방법은
+[실행 및 결과 안내](EXPERIMENT.md)를 보세요. 아래 내용은 기존 3·8 실험 기록입니다.
+
+## 기존 3·8 Shortcut recovery 실험
 
 `recovery_experiment.py`는 기존 pilot의 데이터·CNN·학습·평가 함수를 재사용해
 편향 exposure 이후 중립 데이터로 이어 학습합니다. 기존 `pilot.py`는 그대로입니다.
