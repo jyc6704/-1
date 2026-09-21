@@ -1,0 +1,25 @@
+{
+  "dataset": "emnist_digits",
+  "seed": 43,
+  "design_sha256": "c5a79ce39bfb800b0adaa0de31132561d7c0280d3e6cd26f30e2f1394c905bed",
+  "permutation": [
+    2,
+    9,
+    6,
+    7,
+    1,
+    8,
+    0,
+    3,
+    4,
+    5
+  ],
+  "counts": {
+    "exposure": 96000,
+    "recovery": 96000,
+    "validation": 48000
+  },
+  "seed_scheme": "SHA256 of JSON tuple(dataset, seed, stage, purpose, epoch)",
+  "exposure_epochs": 2,
+  "recovery_epochs": 10
+}

@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "finished_at": "2026-09-21T22:53:08.833290+00:00",
+  "profile": "full",
+  "training_paths": 30,
+  "validation_observations": 420,
+  "test_observations": 60,
+  "protocol_hash": "23c29e8bac1b4d480c07230af3c3f5f0379b16cbf19330d3c2af48250961601a"
+}

@@ -1,0 +1,32 @@
+{
+  "dataset": "mnist",
+  "files": [
+    {
+      "file": "raw_sources/mnist/train_000000.npz",
+      "sha256": "f0146e08a673b15e5aadc57d91e65ea4f6c464d02bdac90bc86ee7fde62cc795",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/mnist/train_020000.npz",
+      "sha256": "9254e7a134b3e767e1146f0b7960d1f9fcb6467e87141332fd6ac8976330b48e",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/mnist/train_040000.npz",
+      "sha256": "d68af9f390c60954925bdef764eb0bcc39711f3c97b31c56ba8a01516abf520d",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/mnist/test_000000.npz",
+      "sha256": "4061c6953ad2e2934ec01b84c7a8102b0016b2e292298aefdef4ae8aaa47ff3b",
+      "split": "test",
+      "count": 10000
+    }
+  ],
+  "orientation": "identity",
+  "source": "torchvision.datasets.MNIST",
+  "pixels": "uint8, loader-native orientation; labels 0..9; ids are official split indices"
+}

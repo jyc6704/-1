@@ -1,0 +1,8 @@
+{
+  "run_id": "mnist_s42_p090",
+  "training_complete": true,
+  "global_step": 4500,
+  "next_epoch_index": 12,
+  "next_batch": 0,
+  "updated_at": "2026-09-21T13:32:15.555601+00:00"
+}

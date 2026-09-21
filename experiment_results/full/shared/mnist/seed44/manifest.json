@@ -1,0 +1,25 @@
+{
+  "dataset": "mnist",
+  "seed": 44,
+  "design_sha256": "3ac90b5fd47a087daf1220f649d1f0e81d38a66add9c5f4ab869cecda89e7a3d",
+  "permutation": [
+    1,
+    8,
+    0,
+    3,
+    5,
+    4,
+    7,
+    2,
+    6,
+    9
+  ],
+  "counts": {
+    "exposure": 24000,
+    "recovery": 24000,
+    "validation": 12000
+  },
+  "seed_scheme": "SHA256 of JSON tuple(dataset, seed, stage, purpose, epoch)",
+  "exposure_epochs": 2,
+  "recovery_epochs": 10
+}

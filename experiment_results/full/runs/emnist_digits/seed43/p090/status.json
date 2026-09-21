@@ -1,0 +1,8 @@
+{
+  "run_id": "emnist_digits_s43_p090",
+  "training_complete": true,
+  "global_step": 18000,
+  "next_epoch_index": 12,
+  "next_batch": 0,
+  "updated_at": "2026-09-21T14:40:40.731356+00:00"
+}
