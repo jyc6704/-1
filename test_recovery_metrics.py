@@ -11,7 +11,9 @@ import unittest
 from contextlib import contextmanager
 from uuid import uuid4
 
-from recovery_metrics import calculate_recovery, calculate_scores, color_scores_from_predictions
+from recovery_metrics import (
+    calculate_recovery, calculate_scores, color_scores_from_predictions, calculate_paired_recovery,
+)
 
 
 SCRIPT = Path(__file__).with_name("recovery_metrics.py")
@@ -31,6 +33,52 @@ def fixture_directory():
         if resolved.parent != root:
             raise RuntimeError("테스트 fixture가 작업 경로를 벗어났습니다.")
         shutil.rmtree(resolved)
+
+
+class PairedRecoveryTests(unittest.TestCase):
+    def rows(self):
+        rows = []
+        # Seed 42: 50% recovery; seed 43: 100%. Ratios must precede averaging.
+        for seed, curves in ((42, { .5: [.6, .8], .99: [.2, .5]}),
+                             (43, { .5: [.8, .9], .99: [.7, .9]})):
+            for p, curve in curves.items():
+                for epoch, q in enumerate(curve):
+                    rows.append(dict(seed=seed, p=p, recovery_epoch=epoch,
+                        dataset='mnist', split='validation', num_classes=2, num_colors=2,
+                        mean_color_accuracy=q, neutral_accuracy=q, all_colors_accuracy=q,
+                        flip_rate=0, initial_model_sha256=str(seed),
+                        num_exposure=40, num_recovery=40, num_validation=20))
+        return rows
+
+    def test_pairing_is_seed_specific_and_order_independent(self):
+        derived = calculate_paired_recovery(list(reversed(self.rows())), 1)
+        finals = {r['seed']: r for r in derived if r['p'] == .99 and r['recovery_epoch'] == 1}
+        self.assertAlmostEqual(finals[42]['q_recovery_percent'], 50)
+        self.assertAlmostEqual(finals[43]['q_recovery_percent'], 100)
+        self.assertAlmostEqual(finals[42]['q_gap_same_epoch_pp'], 30)
+        self.assertTrue(all(r['q_recovery_percent'] is None for r in derived if r['p'] == .5))
+
+    def test_missing_neutral_duplicate_and_incomplete_data_are_rejected(self):
+        rows = self.rows()
+        for bad in ([r for r in rows if r['p'] != .5], rows + [rows[0]], rows[:-1]):
+            with self.assertRaises(ValueError):
+                calculate_paired_recovery(bad, 1)
+
+    def test_reference_compatibility_is_checked(self):
+        rows = self.rows()
+        rows[3]['initial_model_sha256'] = 'different'
+        with self.assertRaises(ValueError):
+            calculate_paired_recovery(rows, 1)
+
+    def test_small_gap_stays_undefined(self):
+        rows = self.rows()
+        for row in rows:
+            if row['seed'] == 42 and row['p'] == .99 and row['recovery_epoch'] == 0:
+                row.update(mean_color_accuracy=.8, neutral_accuracy=.8, all_colors_accuracy=.8)
+        result = calculate_paired_recovery(rows, 1)
+        affected = [r for r in result if r['seed'] == 42 and r['p'] == .99]
+        self.assertTrue(all(r['q_recovery_percent'] is None for r in affected))
+        self.assertTrue(all(r['recovery_status'] == 'initial_gap_too_small_or_nonpositive' for r in affected))
 
 
 class RecoveryMetricsTests(unittest.TestCase):

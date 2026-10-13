@@ -166,6 +166,62 @@ def calculate_recovery(current: dict, initial: dict | None = None,
     return result
 
 
+def calculate_paired_recovery(rows: list[dict], final_epoch: int,
+                              min_initial_gap: float = 0.001) -> list[dict]:
+    """완료된 이진 실험의 seed·p별 초기값과 같은 seed의 중립 기준을 연결한다.
+
+    단일 파일의 마지막 행을 공통 기준으로 사용하는 기존 CLI와 별개의 진입점이다.
+    이 함수는 한 MNIST 3·8 validation 실행의 원시 행을 받는다.
+    """
+    if final_epoch < 1 or not rows:
+        raise ValueError("완료된 회복 epoch와 결과 행이 필요합니다.")
+    indexed, paths = {}, {}
+    for row in rows:
+        seed, p, epoch = row["seed"], row["p"], row["recovery_epoch"]
+        if not math.isfinite(p) or not .5 <= p <= 1:
+            raise ValueError("이진분류 p는 0.5~1이어야 합니다.")
+        if row.get("num_classes") != 2 or row.get("num_colors") != 2:
+            raise ValueError("이 분석은 2클래스·2색 결과만 받습니다.")
+        if row.get("dataset") != "mnist" or row.get("split") != "validation":
+            raise ValueError("한 MNIST validation 실행의 결과만 비교할 수 있습니다.")
+        key = (seed, p, epoch)
+        if key in indexed:
+            raise ValueError("중복된 seed/p/epoch 결과입니다.")
+        calculate_scores(row, 2, 2)  # Q, M, F의 수학적 일관성도 검사한다.
+        indexed[key] = row
+        paths.setdefault((seed, p), set()).add(epoch)
+    expected = set(range(final_epoch + 1))
+    for (seed, p), epochs in paths.items():
+        if epochs != expected:
+            raise ValueError(f"미완료 또는 잘못된 평가 시점: seed={seed}, p={p}")
+        if (seed, .5) not in paths:
+            raise ValueError(f"seed={seed}의 중립 대조군 p=0.5가 없습니다.")
+    derived = []
+    for row in rows:
+        seed, p, epoch = row["seed"], row["p"], row["recovery_epoch"]
+        initial = indexed[seed, p, 0]
+        reference = indexed[seed, .5, final_epoch]
+        same_epoch = indexed[seed, .5, epoch]
+        for other in (initial, reference, same_epoch):
+            for key in ("initial_model_sha256", "num_exposure", "num_recovery", "num_validation"):
+                if row[key] != other[key]:
+                    raise ValueError(f"같은 seed의 비교 조건이 다릅니다: {key}")
+        values = calculate_recovery(row, initial, reference, min_initial_gap)
+        if p == .5:
+            values["q_recovery_percent"] = None
+            values["recovery_status"] = "neutral_control"
+        derived.append({
+            **row, **values,
+            "q_initial": initial["all_colors_accuracy"],
+            "q_reference": reference["all_colors_accuracy"],
+            "reference_seed": seed, "reference_p": .5,
+            "reference_recovery_epoch": final_epoch,
+            "q_gap_same_epoch_pp": 100 * (
+                same_epoch["all_colors_accuracy"] - row["all_colors_accuracy"]),
+        })
+    return derived
+
+
 def resolve_input(path: Path) -> Path:
     if path.is_dir():
         for name in ("results.csv", "result.json"):

@@ -1,6 +1,61 @@
 # -1
 과제연구1
 
+## 현재 실행: 3·8 이진분류 회복 실험 (epoch 평가)
+
+현재 진입점은 `python recovery_experiment.py`입니다. GitHub의 기존 이진 회복
+코드에 직접 측정한 Q와 시드별 중립 기준 모델 대비 회복률을 연결했습니다.
+step별 평가는 아직 추가하지 않았습니다. 아래 pilot 설명은 기존 편향 학습용입니다.
+
+```powershell
+# 기본: 3 seeds × 3 p, 편향 1 epoch + 회복 10 epochs
+python recovery_experiment.py
+# 실제 MNIST로 짧게 확인: 중립 대조군과 강한 편향, 한 시드
+python recovery_experiment.py --seeds 42 --p-values .5 .99 --recovery-epochs 2
+# 검증 (다운로드 없음)
+python -m unittest test_recovery_experiment test_recovery_metrics
+```
+
+- MNIST 숫자 3→target 0, 8→target 1; color ID 3·8의 두 색을 사용합니다.
+- 원본을 seed별 40/40/20 편향 학습/회복 학습/검증으로 나눕니다.
+  기존 이진 실험의 무작위 분할을 유지합니다. 10클래스 실험의 층화·중복제거와는 다릅니다.
+- 기본 p는 .50/.90/.99, seeds는 42/43/44입니다. p=.5가 중립 조건입니다.
+  편향 조건만 지정해도 회복률 계산용 p=.5 대조군을 자동으로 추가하고 화면에 알립니다.
+- `BinarySmallCNN`, Adam(lr=.001), batch=64. 편향 1 epoch를 학습한 뒤
+  가중치를 유지하고 Adam 상태를 초기화해 모든 계층을 중립 데이터로 이어 학습합니다.
+- 같은 seed에서 초기 가중치, 원본 분할, hue, 학습 순서와 회복 색 배정을 공유합니다.
+  회복 색은 매 epoch 숫자별 50:50으로 재배정하며 매 step 바꾸지 않습니다.
+- 회복 직전 epoch 0 및 매 회복 epoch 종료 후 동일 validation 원본을 두 색으로 평가합니다.
+  공식 test는 학습·평가에 사용하지 않습니다. EMNIST는 이 실행에서 지원하지 않습니다.
+- Q(`all_colors_accuracy`)는 두 색 모두 정답인 원본 비율입니다.
+  M(`mean_color_accuracy`, 기존 `neutral_accuracy`와 동일), Flip Rate 등도 보존합니다.
+- 회복률은 seed·p별 Q0와 같은 seed의 중립 대조군 최종 Q_ref를 사용해
+  `100*(Q_epoch-Q0)/(Q_ref-Q0)`로 계산한 다음 seed 평균·표본 SD를 구합니다.
+  중립 대조군 자체와 초기 격차가 0.001 이하인 경우 회복률을 비워 둡니다.
+  음수와 100% 초과를 보존하며, 미정의 값을 0으로 대체하지 않습니다.
+- 기존 `recovery_score`는 별도의 보조 합성 지표이며 회복 백분율이 아닙니다.
+
+결과는 `recovery_results_38/run_날짜_시간/`의 새 폴더에 저장됩니다.
+
+| 파일 | 내용 |
+|---|---|
+| `raw_results.csv` | 매 epoch 관측한 Q·M·색상 의존성 및 학습 결과 |
+| `derived_results.csv` | 전체 학습 완료 후 계산한 회복률, Q0·Q_ref, 기준 seed·epoch, 절대 격차 |
+| `summary_results.csv` | p·epoch별 평균·표본 SD·지표별 유효 seed 수; 학습 중 회복률은 빈칸 |
+| `plots/` | Q, 상대 회복률, 같은 epoch 대조군과의 Q 격차 및 기존 보조 지표 그래프 |
+| `config.json`, `split_indices.pt`, `assignments/` | 설정과 재현용 원본·색 배정 |
+| `checkpoints/` | 각 조건의 회복 직전·최종 모델 |
+| `status.json` | 완료/실패 여부와 완료한 평가 수 |
+
+중단 시 완료된 원시 결과는 남지만 자동 재개는 지원하지 않습니다.
+Q_ref가 최종 회복 epoch에 의존하므로 2 epoch 확인 실행의 회복률을
+10 epoch 정식 실행의 회복률과 같은 기준으로 해석하지 마세요.
+이 다중 시드 결과는 실행기가 자동 후처리합니다. 아래의 기존 단일 실행용
+`recovery_metrics.py --initial ... --reference ...` CLI로 전체 CSV를 한꺼번에
+분석하지 마세요. 해당 CLI는 마지막 행을 하나의 기준값으로 선택합니다.
+
+수정 전 코드는 [주석 보존 기록](history/before_binary_epoch_20261013/README.md)에 있습니다.
+
 ## 현재 실험: 3·8 binary pilot
 
 `python pilot.py`로 BinarySmallCNN을 p=0.99 biased 데이터에서 학습합니다.

@@ -7,3 +7,12 @@ data/
 cnn_results_38/
 pilot_results*/
 validation_outputs*/
+
+node_modules/
+/tmp/
+/output/
+/.chart-data-*/
+/assignment-alerts/
+/발표_산출물/
+/중간발표_전체자료.zip
+/recovery_results_38/

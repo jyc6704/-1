@@ -67,6 +67,36 @@ def subset_labels(subset: Subset) -> torch.Tensor:
     return subset.dataset.targets[indices].long()
 
 
+def split_exposure_recovery_validation(
+    dataset: Digit38MNIST, seed: int
+) -> tuple[Subset, Subset, Subset]:
+    """Partition official train sources once per seed: 40% / 40% / 20%."""
+    size = round(len(dataset) * 0.4)
+    splits = random_split(
+        dataset, [size, size, len(dataset) - 2 * size],
+        generator=torch.Generator().manual_seed(seed),
+    )
+    indices = torch.cat([torch.as_tensor(s.indices) for s in splits])
+    if not torch.equal(indices.sort().values, torch.arange(len(dataset))):
+        raise ValueError("Recovery splits must be disjoint and cover every source.")
+    if any(set(subset_labels(s).tolist()) != set(TARGET_DIGITS) for s in splits):
+        raise ValueError("Every recovery split must contain all target digits.")
+    return tuple(splits)
+
+
+def recovery_neutral_seed(base_seed: int, epoch: int) -> int:
+    """Epochs start at one; the schedule is independent of exposure strength p."""
+    if epoch < 1:
+        raise ValueError("Recovery epoch must be at least one.")
+    return base_seed + 10_000 + epoch
+
+
+def make_recovery_color_ids(
+    labels: torch.Tensor, base_seed: int, epoch: int
+) -> torch.Tensor:
+    return make_neutral_color_ids(labels, recovery_neutral_seed(base_seed, epoch))
+
+
 def make_hue_offsets(
     num_official_images: int, seed: int, jitter: float = HUE_JITTER
 ) -> torch.Tensor:

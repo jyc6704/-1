@@ -1,4 +1,7 @@
-"""학습 1 epoch와 10색 validation 평가."""
+"""학습 1 epoch와 3·8 두 색 validation 평가.
+
+수정 전 구현은 history/before_binary_epoch_20261013/에 주석으로 보존한다.
+"""
 
 from __future__ import annotations
 
@@ -76,6 +79,8 @@ def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str,
 
     if aligned_loader.dataset.subset is not conflict_loader.dataset.subset:
         raise ValueError("두 평가 조건은 동일한 validation subset을 사용해야 합니다.")
+    if not torch.equal(aligned_loader.dataset.hue_offsets, conflict_loader.dataset.hue_offsets):
+        raise ValueError("두 평가 조건은 동일한 hue offset을 사용해야 합니다.")
     if not all(isinstance(loader.sampler, SequentialSampler)
                for loader in (aligned_loader, conflict_loader)):
         raise ValueError("평가 DataLoader는 shuffle=False여야 합니다.")
@@ -84,7 +89,7 @@ def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str,
     if aligned_loader.drop_last or conflict_loader.drop_last:
         raise ValueError("평가에서는 마지막 batch도 포함해야 합니다.")
     model.eval()
-    aligned_correct = conflict_correct = flips = total = 0
+    aligned_correct = conflict_correct = both_correct = flips = total = 0
     for aligned_batch, conflict_batch in zip(aligned_loader, conflict_loader):
         images_a, targets_a, digits_a, colors_a, _ = aligned_batch
         images_c, targets_c, digits_c, colors_c, _ = conflict_batch
@@ -96,6 +101,7 @@ def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str,
         pred_c = model(images_c.to(device)).argmax(1).cpu()
         aligned_correct += (pred_a == targets_a).sum().item()
         conflict_correct += (pred_c == targets_c).sum().item()
+        both_correct += ((pred_a == targets_a) & (pred_c == targets_c)).sum().item()
         flips += (pred_a != pred_c).sum().item()
         total += len(targets_a)
     if total == 0:
@@ -106,6 +112,8 @@ def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str,
         "aligned_accuracy": aligned,
         "conflict_accuracy": conflict,
         "neutral_accuracy": (aligned + conflict) / 2,
+        "mean_color_accuracy": (aligned + conflict) / 2,
+        "all_colors_accuracy": both_correct / total,
         "shortcut_gap": aligned - conflict,
         "flip_rate": flips / total,
     }
