@@ -1,0 +1,25 @@
+{
+  "protocol_hash": "23c29e8bac1b4d480c07230af3c3f5f0379b16cbf19330d3c2af48250961601a",
+  "design_hash": "6366f18e05573d3934bb136bd3cd390d992b4bb57e955375d389ee8c7396e2f6",
+  "initial_model_sha256": "b7204aff48e75204e00271d5e6232bd3638439310f66c852a951593f9c799ce4",
+  "run_id": "mnist_s43_p010",
+  "dataset": "mnist",
+  "seed": 43,
+  "p": 0.1,
+  "num_exposure": 24000,
+  "num_recovery": 24000,
+  "num_validation": 12000,
+  "num_test": 10000,
+  "permutation": [
+    2,
+    9,
+    6,
+    7,
+    1,
+    8,
+    0,
+    3,
+    4,
+    5
+  ]
+}

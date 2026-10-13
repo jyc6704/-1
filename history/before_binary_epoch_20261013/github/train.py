@@ -1,13 +1,13 @@
 # Historical source, fully commented; not executable.
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: train.py
 # """학습 1 epoch와 10색 validation 평가."""
-# 
+#
 # from __future__ import annotations
-# 
+#
 # import torch
 # from torch import nn
-# 
-# 
+#
+#
 # def train_one_epoch(model, loader, optimizer, device) -> tuple[float, float]:
 #     model.train()
 #     criterion = nn.CrossEntropyLoss()
@@ -24,8 +24,8 @@
 #         correct += (logits.argmax(1) == labels).sum().item()
 #         total += batch_size
 #     return loss_sum / total, correct / total
-# 
-# 
+#
+#
 # # 기존 0~9 전용 평가: 최종 본실험 참고용으로 보존하며 현재 실행하지 않는다.
 # # @torch.inference_mode()
 # # def evaluate_all_colors(model, loader, num_sources: int, device) -> dict[str, float]:
@@ -62,20 +62,20 @@
 # #         "flip_rate": flip_rate,
 # #     }
 # #
-# 
+#
 # # ---------------------------------------------------------------------------
 # # Binary (3, 8): 같은 원본과 같은 δ에서 두 색을 적용한 결과를 비교한다.
 # # ---------------------------------------------------------------------------
-# 
+#
 # @torch.inference_mode()
 # def evaluate_binary(model, aligned_loader, conflict_loader, device) -> dict[str, float]:
 #     """Aligned/Conflict와 2색 평균 Neutral, 색 변경 Flip Rate를 계산한다.
-# 
+#
 #     두 loader는 동일 subset 객체, 동일 순서(shuffle=False)를 사용해야 한다.
 #     Flip Rate = 색만 반대로 바꿨을 때 예측이 달라진 원본 이미지의 비율.
 #     """
 #     from torch.utils.data import SequentialSampler
-# 
+#
 #     if aligned_loader.dataset.subset is not conflict_loader.dataset.subset:
 #         raise ValueError("두 평가 조건은 동일한 validation subset을 사용해야 합니다.")
 #     if not torch.equal(aligned_loader.dataset.hue_offsets, conflict_loader.dataset.hue_offsets):

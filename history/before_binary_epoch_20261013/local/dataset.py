@@ -1,48 +1,48 @@
 # Historical source, fully commented; not executable.
 # Origin: local before edit: dataset.py
 # """숫자 3과 8만 사용하는 재현 가능한 Spurious Colored MNIST.
-# 
+#
 # 숫자 모양이 실제 예측 대상이고 색상은 의도적으로 강한 상관관계를 갖게 만든
 # 허위 특징(spurious feature)이다. 이미지 파일을 저장하지 않고 __getitem__에서
 # RGB 이미지를 실시간 생성한다.
 # """
-# 
+#
 # from __future__ import annotations
-# 
+#
 # import colorsys
 # from pathlib import Path
-# 
+#
 # import torch
 # from torch.utils.data import Dataset, Subset, random_split
 # from torchvision.datasets import MNIST
 # from torchvision.transforms import ToTensor
-# 
+#
 # TARGET_DIGITS = (3, 8)
 # COLOR_IDS = (3, 8)
 # LABEL_TO_COLOR = {3: 3, 8: 8}
 # OTHER_COLOR = {3: 8, 8: 3}
 # HUE_STEP = 36.0
 # HUE_JITTER = 5.0
-# 
-# 
+#
+#
 # class Digit38MNIST(Dataset):
 #     """공식 MNIST에서 숫자 3과 8만 남긴 데이터셋."""
-# 
+#
 #     def __init__(self, mnist: MNIST):
 #         self.mnist = mnist
 #         mask = (mnist.targets == 3) | (mnist.targets == 8)
 #         self.original_indices = torch.where(mask)[0]
 #         self.targets = mnist.targets[self.original_indices].long()
-# 
+#
 #     def __len__(self) -> int:
 #         return len(self.original_indices)
-# 
+#
 #     def __getitem__(self, idx: int):
 #         original_idx = int(self.original_indices[idx])
 #         image, label = self.mnist[original_idx]
 #         return image, int(label), original_idx
-# 
-# 
+#
+#
 # def load_digit38_mnist(
 #     root: str = "./data", download: bool = False
 # ) -> tuple[Digit38MNIST, Digit38MNIST]:
@@ -51,8 +51,8 @@
 #     train = MNIST(root=root, train=True, download=download, transform=transform)
 #     test = MNIST(root=root, train=False, download=download, transform=transform)
 #     return Digit38MNIST(train), Digit38MNIST(test)
-# 
-# 
+#
+#
 # def split_train_validation(
 #     dataset: Digit38MNIST, seed: int, val_ratio: float = 0.2
 # ) -> tuple[Subset, Subset]:
@@ -62,13 +62,13 @@
 #     return random_split(
 #         dataset, [len(dataset) - val_size, val_size], generator=generator
 #     )
-# 
-# 
+#
+#
 # def subset_labels(subset: Subset) -> torch.Tensor:
 #     indices = torch.as_tensor(subset.indices, dtype=torch.long)
 #     return subset.dataset.targets[indices].long()
-# 
-# 
+#
+#
 # def make_hue_offsets(
 #     num_official_images: int, seed: int, jitter: float = HUE_JITTER
 # ) -> torch.Tensor:
@@ -77,13 +77,13 @@
 #     return (
 #         torch.rand(num_official_images, generator=generator) * (2.0 * jitter) - jitter
 #     )
-# 
-# 
+#
+#
 # def make_biased_color_ids(
 #     labels: torch.Tensor, p: float = 0.99, seed: int = 42
 # ) -> torch.Tensor:
 #     """P(color=3|digit=3)=P(color=8|digit=8)=p가 되도록 고정 배정한다.
-# 
+#
 #     conflict 표본은 반대 색을 받는다: 3→color 8, 8→color 3.
 #     """
 #     if not 0.5 <= p <= 1.0:
@@ -99,8 +99,8 @@
 #         color_ids[indices[:num_aligned]] = LABEL_TO_COLOR[digit]
 #         color_ids[indices[num_aligned:]] = OTHER_COLOR[digit]
 #     return color_ids
-# 
-# 
+#
+#
 # def make_neutral_color_ids(labels: torch.Tensor, seed: int = 42) -> torch.Tensor:
 #     """각 숫자 안에서 color 3과 color 8을 50:50에 가깝게 고정 배정한다."""
 #     if not torch.all((labels == 3) | (labels == 8)):
@@ -115,13 +115,13 @@
 #         assigned = assigned[torch.randperm(len(assigned), generator=generator)]
 #         color_ids[indices] = assigned
 #     return color_ids
-# 
-# 
+#
+#
 # def hue_to_rgb(hue_degrees: float) -> torch.Tensor:
 #     rgb = colorsys.hsv_to_rgb((hue_degrees % 360.0) / 360.0, 1.0, 1.0)
 #     return torch.tensor(rgb, dtype=torch.float32)
-# 
-# 
+#
+#
 # def colorize(
 #     image: torch.Tensor, color_id: int, hue_offset: float
 # ) -> tuple[torch.Tensor, float]:
@@ -130,11 +130,11 @@
 #         raise ValueError("color_id는 3 또는 8이어야 합니다.")
 #     hue = (HUE_STEP * color_id + hue_offset) % 360.0
 #     return image * hue_to_rgb(hue).view(3, 1, 1), hue
-# 
-# 
+#
+#
 # class SpuriousColoredMNIST(Dataset):
 #     """색 배정과 Hue offset이 epoch마다 바뀌지 않는 3·8 RGB 데이터셋."""
-# 
+#
 #     def __init__(
 #         self, subset: Subset, color_ids: torch.Tensor, hue_offsets: torch.Tensor
 #     ):
@@ -143,18 +143,18 @@
 #         self.subset = subset
 #         self.color_ids = color_ids.long()
 #         self.hue_offsets = hue_offsets.float()
-# 
+#
 #     def __len__(self) -> int:
 #         return len(self.subset)
-# 
+#
 #     def __getitem__(self, idx: int):
 #         image, digit, original_idx = self.subset[idx]
 #         color_id = int(self.color_ids[idx])
 #         colored, hue = colorize(image, color_id, float(self.hue_offsets[original_idx]))
 #         target = 0 if digit == 3 else 1  # 향후 2-class 학습용 target
 #         return colored, target, digit, color_id, hue
-# 
-# 
+#
+#
 # def label_color_distribution(
 #     labels: torch.Tensor, color_ids: torch.Tensor
 # ) -> torch.Tensor:
@@ -165,8 +165,8 @@
 #         for column, color_id in enumerate(COLOR_IDS):
 #             result[row, column] = (class_colors == color_id).float().mean()
 #     return result
-# 
-# 
+#
+#
 # def spurious_correlation(labels: torch.Tensor, color_ids: torch.Tensor) -> float:
 #     """digit(3/8)와 color(3/8)의 이진 Pearson/phi 상관계수."""
 #     digit_binary = (labels == 8).float()
@@ -177,14 +177,14 @@
 #         digit_centered.square().sum() * color_centered.square().sum()
 #     )
 #     return float((digit_centered * color_centered).sum() / denominator)
-# 
-# 
+#
+#
 # def visualize_random_samples(
 #     dataset: SpuriousColoredMNIST, output_path=None, seed=42, show=False
 # ):
 #     """랜덤 표본 20개의 digit, target, color_id, 실제 Hue를 표시한다."""
 #     import matplotlib.pyplot as plt
-# 
+#
 #     indices = torch.randperm(
 #         len(dataset), generator=torch.Generator().manual_seed(seed)
 #     )[:20]
@@ -199,14 +199,14 @@
 #         ax.axis("off")
 #     fig.tight_layout()
 #     _finish_figure(fig, output_path, show)
-# 
-# 
+#
+#
 # def visualize_label_color_heatmap(
 #     labels, color_ids, output_path=None, show=False, title="Label-color distribution"
 # ):
 #     """3·8 숫자와 color 3·8의 2×2 조건부 분포를 표시한다."""
 #     import matplotlib.pyplot as plt
-# 
+#
 #     matrix = label_color_distribution(labels, color_ids)
 #     fig, ax = plt.subplots(figsize=(5, 4))
 #     plot = ax.imshow(matrix.numpy(), vmin=0, vmax=1, cmap="Blues")
@@ -219,8 +219,8 @@
 #     fig.colorbar(plot, ax=ax, label="P(color | digit)")
 #     fig.tight_layout()
 #     _finish_figure(fig, output_path, show)
-# 
-# 
+#
+#
 # def visualize_same_image_both_colors(
 #     subset: Subset,
 #     hue_offsets: torch.Tensor,
@@ -230,7 +230,7 @@
 # ):
 #     """동일한 숫자 모양을 color 3과 color 8로 바꾸어 비교한다."""
 #     import matplotlib.pyplot as plt
-# 
+#
 #     image, digit, original_idx = subset[subset_index]
 #     offset = float(hue_offsets[original_idx])
 #     fig, axes = plt.subplots(1, 2, figsize=(6, 3))
@@ -241,11 +241,11 @@
 #         ax.axis("off")
 #     fig.tight_layout()
 #     _finish_figure(fig, output_path, show)
-# 
-# 
+#
+#
 # def _finish_figure(fig, output_path, show: bool) -> None:
 #     import matplotlib.pyplot as plt
-# 
+#
 #     if output_path is not None:
 #         path = Path(output_path)
 #         path.parent.mkdir(parents=True, exist_ok=True)
@@ -254,11 +254,11 @@
 #         plt.show()
 #     else:
 #         plt.close(fig)
-# 
-# 
+#
+#
 # def verify_dataset(seed: int = 42, p: float = 0.99, show_plots: bool = True) -> dict:
 #     """3·8 데이터 생성 조건을 자동 검사하고 요약 결과를 반환한다.
-# 
+#
 #     이 함수는 모델을 생성하거나 학습하지 않는다. 데이터가 연구 설계대로
 #     만들어졌는지만 통계, tensor shape, 재현성 및 시각화로 확인한다.
 #     """
@@ -266,23 +266,23 @@
 #     digit_train, digit_test = load_digit38_mnist(download=False)
 #     train_subset, validation_subset = split_train_validation(digit_train, seed)
 #     labels = subset_labels(train_subset)
-# 
+#
 #     # 공식 원본 index마다 offset 하나를 생성하여 모든 조건에서 공유한다.
 #     hue_offsets = make_hue_offsets(len(digit_train.mnist), seed)
 #     biased_ids = make_biased_color_ids(labels, p=p, seed=seed)
 #     neutral_ids = make_neutral_color_ids(labels, seed=seed + 10_000)
 #     biased_dataset = SpuriousColoredMNIST(train_subset, biased_ids, hue_offsets)
-# 
+#
 #     biased_matrix = label_color_distribution(labels, biased_ids)
 #     neutral_matrix = label_color_distribution(labels, neutral_ids)
 #     actual_p = float((biased_ids == labels).float().mean())
 #     biased_phi = spurious_correlation(labels, biased_ids)
 #     neutral_phi = spurious_correlation(labels, neutral_ids)
-# 
+#
 #     first_sample = biased_dataset[0]
 #     repeated_sample = biased_dataset[0]
 #     image, target, digit, color_id, hue = first_sample
-# 
+#
 #     checks = {
 #         "only_digits_3_and_8": set(labels.tolist()) == {3, 8},
 #         "rgb_shape_3x28x28": tuple(image.shape) == (3, 28, 28),
@@ -304,7 +304,7 @@
 #             and torch.equal(hue_offsets, make_hue_offsets(len(digit_train.mnist), seed))
 #         ),
 #     }
-# 
+#
 #     print("\n=== 3·8 Spurious Colored MNIST 생성 검증 ===")
 #     for name, passed in checks.items():
 #         print(f"[{'PASS' if passed else 'FAIL'}] {name}")
@@ -325,12 +325,12 @@
 #         f"color={color_id}, hue={hue:.3f}°"
 #     )
 #     print(f"Hue offset range: {hue_offsets.min():.6f}° .. {hue_offsets.max():.6f}°")
-# 
+#
 #     failed = [name for name, passed in checks.items() if not passed]
 #     if failed:
 #         raise AssertionError("데이터셋 검증 실패: " + ", ".join(failed))
 #     print("\n모든 데이터셋 검증을 통과했습니다.")
-# 
+#
 #     visualize_random_samples(
 #         biased_dataset, output / "biased_samples_38.png", seed=seed, show=show_plots
 #     )
@@ -355,7 +355,7 @@
 #         show=show_plots,
 #     )
 #     print(f"시각화 저장 위치: {output.resolve()}")
-# 
+#
 #     return {
 #         "checks": checks,
 #         "actual_p": actual_p,
@@ -364,8 +364,8 @@
 #         "biased_distribution": biased_matrix,
 #         "neutral_distribution": neutral_matrix,
 #     }
-# 
-# 
+#
+#
 # if __name__ == "__main__":
 #     # dataset.py를 직접 실행할 때만 검증과 화면 시각화를 수행한다.
 #     # 다른 코드에서 import할 때는 자동 실행되지 않는다.

@@ -1,14 +1,14 @@
 # Historical source, fully commented; not executable.
 # Origin: local before edit: metrics.py
 # """Shortcut 의존성과 회복 여부를 계산하는 순수 함수."""
-# 
+#
 # from __future__ import annotations
-# 
-# 
+#
+#
 # def shortcut_gap(aligned_accuracy: float, conflict_accuracy: float) -> float:
 #     return aligned_accuracy - conflict_accuracy
-# 
-# 
+#
+#
 # def is_recovered(
 #     gap: float,
 #     neutral_accuracy: float,
@@ -21,8 +21,8 @@
 #         gap <= gap_threshold
 #         and neutral_accuracy >= reference_ratio * reference_accuracy
 #     )
-# 
-# 
+#
+#
 # def recovery_time(
 #     rows: list[dict], reference_accuracy: float, **thresholds
 # ) -> int | None:

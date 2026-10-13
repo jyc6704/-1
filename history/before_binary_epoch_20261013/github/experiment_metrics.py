@@ -2,14 +2,14 @@
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: experiment_metrics.py
 # """Ten-color paired metrics; all base metrics are fractions, R_Q is percent."""
 # from __future__ import annotations
-# 
+#
 # import math
 # import numpy as np
-# 
+#
 # METRICS = ('mean_color_accuracy', 'all_colors_accuracy', 'aligned_accuracy',
 #            'conflict_accuracy', 'shortcut_gap', 'abs_shortcut_gap', 'flip_rate', 'recovery_score')
-# 
-# 
+#
+#
 # def calculate(predictions, targets, permutation):
 #     p = np.asarray(predictions)
 #     y = np.asarray(targets)
@@ -31,8 +31,8 @@
 #     f = float((1 - (counts * (counts - 1)).sum(axis=1) / 90).mean())
 #     gap = a - c
 #     return dict(zip(METRICS, (m, q, a, c, gap, abs(gap), f, m*(1-abs(gap))*(1-f))))
-# 
-# 
+#
+#
 # def recovery(q, q0, qref, min_gap=.001):
 #     if not all(math.isfinite(x) and 0 <= x <= 1 for x in (q, q0, qref)):
 #         raise ValueError('Q values must be finite fractions.')
@@ -40,8 +40,8 @@
 #     if gap <= min_gap:
 #         return None, 'initial_gap_too_small_or_nonpositive'
 #     return 100 * (q - q0) / gap, 'available'
-# 
-# 
+#
+#
 # def self_check():
 #     pi = np.arange(10)
 #     for pred, target, expected in [([3]*10, 3, (1,1,0)),

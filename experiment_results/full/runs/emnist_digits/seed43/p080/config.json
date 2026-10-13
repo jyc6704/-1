@@ -1,0 +1,25 @@
+{
+  "protocol_hash": "23c29e8bac1b4d480c07230af3c3f5f0379b16cbf19330d3c2af48250961601a",
+  "design_hash": "c5a79ce39bfb800b0adaa0de31132561d7c0280d3e6cd26f30e2f1394c905bed",
+  "initial_model_sha256": "b7204aff48e75204e00271d5e6232bd3638439310f66c852a951593f9c799ce4",
+  "run_id": "emnist_digits_s43_p080",
+  "dataset": "emnist_digits",
+  "seed": 43,
+  "p": 0.8,
+  "num_exposure": 96000,
+  "num_recovery": 96000,
+  "num_validation": 48000,
+  "num_test": 40000,
+  "permutation": [
+    2,
+    9,
+    6,
+    7,
+    1,
+    8,
+    0,
+    3,
+    4,
+    5
+  ]
+}

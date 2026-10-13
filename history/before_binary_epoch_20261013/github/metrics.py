@@ -1,12 +1,12 @@
 # Historical source, fully commented; not executable.
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: metrics.py
 # """Shortcut 의존성과 회복 여부를 계산하는 순수 함수."""
-# 
+#
 # from __future__ import annotations
-# 
+#
 # import math
-# 
-# 
+#
+#
 # def recovery_score(
 #     neutral_accuracy: float, shortcut_gap: float, flip_rate: float
 # ) -> float:
@@ -19,12 +19,12 @@
 #         if not math.isfinite(value) or not lower <= value <= 1.0:
 #             raise ValueError(f"{name} must be finite and in [{lower}, 1].")
 #     return neutral_accuracy * (1.0 - abs(shortcut_gap)) * (1.0 - flip_rate)
-# 
-# 
+#
+#
 # def shortcut_gap(aligned_accuracy: float, conflict_accuracy: float) -> float:
 #     return aligned_accuracy - conflict_accuracy
-# 
-# 
+#
+#
 # def is_recovered(
 #     gap: float,
 #     neutral_accuracy: float,
@@ -37,8 +37,8 @@
 #         gap <= gap_threshold
 #         and neutral_accuracy >= reference_ratio * reference_accuracy
 #     )
-# 
-# 
+#
+#
 # def recovery_time(
 #     rows: list[dict], reference_accuracy: float, **thresholds
 # ) -> int | None:

@@ -1,15 +1,15 @@
 # Historical source, fully commented; not executable.
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: experiment.py
 # """One-command paired 10-class recovery study.
-# 
+#
 # python experiment.py               # both datasets, five p values, three seeds
 # python experiment.py --smoke       # small real-data integration run (NOT paper results)
 # python experiment.py --publish     # same pipeline, then explicitly commit/push artifacts
-# 
+#
 # Repeating the identical command resumes the same output directory automatically.
 # """
 # from __future__ import annotations
-# 
+#
 # import argparse
 # from datetime import datetime, timezone
 # import hashlib
@@ -21,13 +21,13 @@
 # import shutil
 # import sys
 # import time
-# 
+#
 # os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 # import numpy as np
 # import torch
 # import torchvision
 # from filelock import FileLock, Timeout
-# 
+#
 # from model import SmallCNN
 # from experiment_data import load_source, prepare_source, shared_design
 # from experiment_io import (atomic, digest, git, keep_awake, load_checkpoint, model_hash,
@@ -35,19 +35,19 @@
 #     verify_manifest, write_csv, write_json, write_manifest, write_text)
 # from experiment_metrics import calculate, self_check
 # from experiment_report import build_report
-# 
+#
 # HERE=Path(__file__).resolve().parent
 # CODE_FILES=['experiment.py','experiment_data.py','experiment_io.py','experiment_metrics.py','experiment_report.py','model.py']
-# 
-# 
+#
+#
 # class PlannedStop(Exception):
 #     pass
-# 
-# 
+#
+#
 # def now():
 #     return datetime.now(timezone.utc).isoformat()
-# 
-# 
+#
+#
 # def configure(device,threads):
 #     torch.set_num_threads(threads)
 #     torch.use_deterministic_algorithms(True)
@@ -59,15 +59,15 @@
 #         torch.backends.cuda.matmul.allow_tf32=False
 #     if device=='cuda' and not torch.cuda.is_available():
 #         raise ValueError('CUDA is unavailable in this Python environment. Install a CUDA build or use --device cpu.')
-# 
-# 
+#
+#
 # def colored_batch(images, ids, palette, colors, device):
 #     ids_t=torch.as_tensor(ids,dtype=torch.long)
 #     gray=images[ids_t].to(device=device,dtype=torch.float32)/255
 #     rgb=palette[ids_t,torch.as_tensor(colors,dtype=torch.long)].to(device)
 #     return gray[:,None,:,:]*rgb[:,:,None,None]
-# 
-# 
+#
+#
 # def evaluate(model,images,labels,ids,palette,permutation,device,batch_size):
 #     saved_rng=rng_state()
 #     was_training=model.training
@@ -94,8 +94,8 @@
 #         mask=labels[ids]==y
 #         values[f'class_q_{y}']=float((predictions[mask]==y).all(axis=1).mean())
 #     return predictions,values,elapsed
-# 
-# 
+#
+#
 # def evaluation_times(epoch_index,batches):
 #     if epoch_index==1:return {batches:[0.]}
 #     if epoch_index<2:return {}
@@ -105,13 +105,13 @@
 #     for fraction in (.25,.5,.75,1.):
 #         result.setdefault(math.ceil(fraction*batches),[]).append(fraction)
 #     return result
-# 
-# 
+#
+#
 # def initial_model(seed):
 #     torch.manual_seed(stable_seed(seed,'model'))
 #     return SmallCNN()
-# 
-# 
+#
+#
 # def run_path(root,protocol,name,seed,p,source,design,args):
 #     run_id=f'{name}_s{seed}_p{round(p*100):03d}'
 #     folder=root/'runs'/name/f'seed{seed}'/f'p{round(p*100):03d}'
@@ -149,7 +149,7 @@
 #     write_json(folder/'metrics.json',state['observations'])
 #     base_elapsed=state['elapsed_seconds']
 #     started=time.perf_counter()
-# 
+#
 #     def checkpoint():
 #         state['elapsed_seconds']=base_elapsed+time.perf_counter()-started
 #         path=folder/'checkpoints'/f"step_{state['global_step']:07d}.pt"
@@ -160,7 +160,7 @@
 #         write_json(folder/'status.json',{'run_id':run_id,'training_complete':state['epoch_index']==2+protocol['recovery_epochs'],
 #                    'global_step':state['global_step'],'next_epoch_index':state['epoch_index'],
 #                    'next_batch':state['next_batch'],'updated_at':now()})
-# 
+#
 #     print(f'[{run_id}] start/resume: epoch_index={state["epoch_index"]}, batch={state["next_batch"]}',flush=True)
 #     while state['epoch_index']<2+protocol['recovery_epochs']:
 #         eidx=state['epoch_index']
@@ -223,8 +223,8 @@
 #                 checkpoint()
 #             if stopping:raise PlannedStop(f'Saved {run_id} at step {state["global_step"]}. Rerun without --stop-after-steps.')
 #     return folder
-# 
-# 
+#
+#
 # def run_test(root,protocol,folder,source,design,args):
 #     config=read_json(folder/'config.json')
 #     existing=folder/'test_metrics.json'
@@ -247,8 +247,8 @@
 #         rows.append(row)
 #         write_json(existing,rows)
 #         print(f'[{config["run_id"]}] official test t={t:g} Q={values["all_colors_accuracy"]:.4f}',flush=True)
-# 
-# 
+#
+#
 # def source_preview(root,name,source):
 #     import matplotlib
 #     matplotlib.use('Agg')
@@ -263,8 +263,8 @@
 #     fig.tight_layout()
 #     path=root/'figures'/f'{name}_source_preview.png';path.parent.mkdir(parents=True,exist_ok=True)
 #     fig.savefig(path,dpi=140);plt.close(fig)
-# 
-# 
+#
+#
 # def protocol_for(args):
 #     code={name:digest(HERE/name) for name in CODE_FILES}
 #     profile='smoke' if args.smoke else 'full'
@@ -285,8 +285,8 @@
 #        'code_sha256':code}
 #     p['protocol_hash']=hashlib.sha256(json.dumps(p,sort_keys=True).encode()).hexdigest()
 #     return p
-# 
-# 
+#
+#
 # def setup(root,protocol):
 #     root.mkdir(parents=True,exist_ok=True)
 #     path=root/'protocol.json'
@@ -302,8 +302,8 @@
 #         except Exception as exc:
 #             provenance={'git':'unavailable','note':type(exc).__name__}
 #         write_json(root/'provenance'/'git.json',provenance)
-# 
-# 
+#
+#
 # def schedule(args):
 #     ordered=[]
 #     for seeds,ps in [(args.seeds[:1],[.1,.99]),(args.seeds[1:],[.1,.99]),
@@ -317,8 +317,8 @@
 #             for p in args.p_values:
 #                 if (name,seed,p) not in ordered:ordered.append((name,seed,p))
 #     return ordered
-# 
-# 
+#
+#
 # def parse_args(argv=None):
 #     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
 #     parser.add_argument('--smoke',action='store_true',help='1000-source real-data check, 1 seed, p=.1/.99, recovery2; not formal results')
@@ -348,8 +348,8 @@
 #     if args.device=='auto':args.device='cuda' if torch.cuda.is_available() else 'cpu'
 #     args.output=(args.output or HERE/'experiment_results'/('smoke' if args.smoke else 'full')).resolve()
 #     return args
-# 
-# 
+#
+#
 # def main(argv=None):
 #     args=parse_args(argv)
 #     root=args.output
@@ -407,8 +407,8 @@
 #     except Timeout:
 #         print('Another process is already using this output directory.',file=sys.stderr)
 #         return 2
-# 
-# 
+#
+#
 # if __name__=='__main__':
 #     try:
 #         raise SystemExit(main())

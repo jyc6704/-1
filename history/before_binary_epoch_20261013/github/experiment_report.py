@@ -2,17 +2,17 @@
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: experiment_report.py
 # """Recompute measurements, aggregate paired seeds and produce analysis-ready files."""
 # from __future__ import annotations
-# 
+#
 # from collections import defaultdict
 # import math
 # from pathlib import Path
 # import statistics
 # import numpy as np
-# 
+#
 # from experiment_io import digest, read_json, write_csv, write_json, write_text
 # from experiment_metrics import METRICS, calculate, recovery
-# 
-# 
+#
+#
 # def collect(root):
 #     rows=[]
 #     for path in sorted((root/'runs').glob('*/seed*/p*/metrics.json')):
@@ -21,8 +21,8 @@
 #         if test.exists():
 #             rows.extend(read_json(test))
 #     return rows
-# 
-# 
+#
+#
 # def summarize(rows, metrics):
 #     groups=defaultdict(list)
 #     for row in rows:
@@ -39,8 +39,8 @@
 #             out[metric+'_n']=len(values)
 #         result.append(out)
 #     return result
-# 
-# 
+#
+#
 # def verify(root, rows, protocol, complete):
 #     seen=set()
 #     designs={}
@@ -97,8 +97,8 @@
 #     return {'prediction_metrics_recomputed':len(rows),'expected_observations':len(expected),
 #             'missing_observations':len(expected-seen),'complete':complete,
 #             'raw_source_checksums_verified':True,'paired_design_verified':True,'tolerance':1e-12}
-# 
-# 
+#
+#
 # def build_report(root, protocol, complete=False, check=True):
 #     root=Path(root)
 #     rows=collect(root)
@@ -182,8 +182,8 @@
 #               '', '제출 형식: 제목·Abstract·본문·참고문헌, 참고문헌 포함 2페이지 이내. 연구자 식별 정보를 제출 파일에서 제거하세요.']
 #     write_text(root/'analysis_brief.md','\n'.join(lines)+'\n')
 #     return rows,derived
-# 
-# 
+#
+#
 # def plots(root,summary,protocol):
 #     import matplotlib
 #     matplotlib.use('Agg')

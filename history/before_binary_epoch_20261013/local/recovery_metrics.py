@@ -1,31 +1,31 @@
 # Historical source, fully commented; not executable.
 # Origin: local before edit: recovery_metrics.py
 # """pilot 결과로 색상 강건성의 회복 지표를 계산한다 (추가 학습 없음).
-# 
+#
 # M = 전체 색상 평균 정확도 (보조 지표)
 # Q = 모든 평가 색상에서 정답인 원본 비율 (주 지표)
 # R_Q = 100 * (Q_t - Q_0) / (Q_ref - Q_0)
-# 
+#
 # 현재 binary pilot은 Q = neutral_accuracy - flip_rate / 2로 계산할 수 있다.
 # 다중 클래스에서는 이미지별 predictions/targets 또는 직접 측정한
 # all_colors_accuracy가 필요하다. 이진 공식을 다중 클래스에 적용하지 않는다.
 # Achille 등의 기준 모델 대비 성능 격차를 회복률로 확장한 것이며,
 # R_Q 자체는 해당 논문의 공식이 아니다. M과 Q의 가중합은 계산하지 않는다.
 # """
-# 
+#
 # from __future__ import annotations
-# 
+#
 # import argparse
 # import csv
 # import json
 # import math
 # from pathlib import Path
-# 
-# 
+#
+#
 # TOLERANCE = 1e-6
 # DEFAULT_ROOT = Path(__file__).resolve().parent / "pilot_results_38"
-# 
-# 
+#
+#
 # def probability(value, name: str) -> float:
 #     """모든 입력 정확도/비율의 단위는 0~1이다."""
 #     if isinstance(value, bool):
@@ -34,11 +34,11 @@
 #     if not math.isfinite(number) or not 0 <= number <= 1:
 #         raise ValueError(f"{name}: 유한한 0~1 값이 필요합니다. 입력={value!r}")
 #     return number
-# 
-# 
+#
+#
 # def color_scores_from_predictions(predictions: list, targets: list) -> dict:
 #     """N x K 정수 예측과 N개 정답에서 M/Q를 직접 계산한다.
-# 
+#
 #     같은 행은 동일 원본, 각 열은 모든 원본에 공통인 고정 색상이다.
 #     예측과 정답은 같은 라벨 체계(예: 0~9)를 사용해야 한다.
 #     """
@@ -64,13 +64,13 @@
 #         "num_sources": len(targets),
 #         "num_colors": num_colors,
 #     }
-# 
-# 
+#
+#
 # def _check_close(actual: float, expected: float, name: str) -> None:
 #     if abs(actual - expected) > TOLERANCE:
 #         raise ValueError(f"{name}가 다른 지표와 일치하지 않습니다: {actual} != {expected}")
-# 
-# 
+#
+#
 # def calculate_scores(row: dict, num_classes: int | None, num_colors: int | None) -> dict:
 #     """기존 binary 요약 결과 또는 일반적인 다색 평가 결과를 읽는다."""
 #     direct = None
@@ -79,7 +79,7 @@
 #         if num_colors is not None and num_colors != direct["num_colors"]:
 #             raise ValueError("색상 수 설정과 predictions 열 개수가 다릅니다.")
 #         num_colors = direct["num_colors"]
-# 
+#
 #     mean_values = [probability(row[key], key) for key in
 #                    ("mean_color_accuracy", "neutral_accuracy") if key in row]
 #     if direct is not None:
@@ -89,7 +89,7 @@
 #     mean = mean_values[0]
 #     for other in mean_values[1:]:
 #         _check_close(mean, other, "전체 색상 평균 정확도")
-# 
+#
 #     if direct is not None:
 #         all_colors = direct["all_colors_accuracy"]
 #         method = "per_source_predictions"
@@ -109,13 +109,13 @@
 #             "config.json 또는 --num-classes 2 --num-colors 2를 지정하세요. "
 #             "다중 클래스는 predictions/targets 또는 직접 측정한 all_colors_accuracy가 필요합니다."
 #         )
-# 
+#
 #     # Q <= M 및 K색의 결합 확률 하한 Q >= K*M-(K-1)을 검증한다.
 #     lower = max(0.0, num_colors * mean - (num_colors - 1)) if num_colors else 0.0
 #     if not lower - TOLERANCE <= all_colors <= mean + TOLERANCE:
 #         raise ValueError("M/Q 또는 flip_rate가 실현 가능한 동일 원본 평가 결과가 아닙니다.")
 #     all_colors = min(mean, max(lower, all_colors))  # 허용 오차 안의 반올림만 보정
-# 
+#
 #     if num_classes == 2 and num_colors == 2:
 #         if "flip_rate" in row:
 #             flip = probability(row["flip_rate"], "flip_rate")
@@ -134,8 +134,8 @@
 #         "calculation_method": method,
 #         **({"num_sources": direct["num_sources"]} if direct is not None else {}),
 #     }
-# 
-# 
+#
+#
 # def calculate_recovery(current: dict, initial: dict | None = None,
 #                        reference: dict | None = None, min_initial_gap: float = 0.001) -> dict:
 #     """회복률은 %, 잔여 격차는 %p. 미정의 값은 None, 비율은 clipping하지 않는다."""
@@ -166,8 +166,8 @@
 #                 current["all_colors_accuracy"] - initial["all_colors_accuracy"]) / gap
 #             result["recovery_status"] = "available"
 #     return result
-# 
-# 
+#
+#
 # def resolve_input(path: Path) -> Path:
 #     if path.is_dir():
 #         for name in ("results.csv", "result.json"):
@@ -178,8 +178,8 @@
 #     if not path.is_file():
 #         raise ValueError(f"입력 파일이 없습니다: {path}")
 #     return path.resolve()
-# 
-# 
+#
+#
 # def load_results(path: Path, args) -> dict:
 #     path = resolve_input(path)
 #     config_path = path.parent / "config.json"
@@ -218,8 +218,8 @@
 #         except (ValueError, KeyError, TypeError) as error:
 #             raise ValueError(f"{path}, 행 {index}: {error}") from error
 #     return {"path": path, "rows": rows, "scores": scores, "config": config}
-# 
-# 
+#
+#
 # def check_comparable(current: dict, other: dict) -> None:
 #     # 현재 pilot의 seed는 split 및 hue offset도 바꾸므로 비교 시 고정해야 한다.
 #     for key in ("digits", "color_ids", "target_mapping", "model_class", "val_ratio",
@@ -232,8 +232,8 @@
 #             a, b = score[key], other["scores"][-1][key]
 #             if a is not None and b is not None and a != b:
 #                 raise ValueError(f"비교 대상의 {key}가 다릅니다.")
-# 
-# 
+#
+#
 # def baseline_info(data: dict | None) -> dict | None:
 #     if data is None:
 #         return None
@@ -241,8 +241,8 @@
 #     return {"source": str(data["path"]), "selected_row": len(data["rows"]),
 #             "exposure_epoch": row.get("exposure_epoch"),
 #             "recovery_epoch": row.get("recovery_epoch"), **data["scores"][-1]}
-# 
-# 
+#
+#
 # def main() -> None:
 #     parser = argparse.ArgumentParser(description="pilot 결과의 M/Q 및 기준 모델 대비 회복률 계산")
 #     parser.add_argument("input", type=Path, nargs="?",
@@ -332,7 +332,7 @@
 #         print(f"saved={output.resolve()}")
 #     except (ValueError, KeyError, TypeError, OSError) as error:
 #         parser.error(str(error))
-# 
-# 
+#
+#
 # if __name__ == "__main__":
 #     main()

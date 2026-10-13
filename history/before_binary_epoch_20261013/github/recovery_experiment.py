@@ -1,13 +1,13 @@
 # Historical source, fully commented; not executable.
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: recovery_experiment.py
 # """Paired 3/8 Colored MNIST: one exposure epoch, then neutral recovery.
-# 
+#
 # Run: python recovery_experiment.py
 # Smoke: python recovery_experiment.py --seeds 42 --p-values .99 --recovery-epochs 2
 # """
-# 
+#
 # from __future__ import annotations
-# 
+#
 # import argparse
 # import copy
 # import csv
@@ -20,11 +20,11 @@
 # from collections import defaultdict
 # from datetime import datetime
 # from pathlib import Path
-# 
+#
 # import numpy as np
 # import torch
 # from torch.utils.data import DataLoader
-# 
+#
 # from dataset import (
 #     COLOR_IDS, HUE_JITTER, HUE_STEP, LABEL_TO_COLOR, OTHER_COLOR, TARGET_DIGITS,
 #     SpuriousColoredMNIST, load_digit38_mnist, make_biased_color_ids,
@@ -35,7 +35,7 @@
 # from model import BinarySmallCNN
 # from pilot import seed_everything, unique_run_dir
 # from train import evaluate_binary, train_one_epoch
-# 
+#
 # LEARNING_RATE = 0.001
 # METRICS = (
 #     "aligned_accuracy", "conflict_accuracy", "neutral_accuracy", "shortcut_gap",
@@ -47,16 +47,16 @@
 #     *METRICS, "num_exposure", "num_recovery", "num_validation", "learning_rate",
 #     "batch_size", "initial_model_sha256",
 # )
-# 
-# 
+#
+#
 # def state_hash(state: dict) -> str:
 #     digest = hashlib.sha256()
 #     for name, value in sorted(state.items()):
 #         digest.update(name.encode())
 #         digest.update(value.detach().cpu().contiguous().numpy().tobytes())
 #     return digest.hexdigest()
-# 
-# 
+#
+#
 # def seed_plan(seed: int, epochs: int) -> dict:
 #     return {
 #         "base_seed": seed, "split_seed": seed, "model_initialization_seed": seed,
@@ -70,16 +70,16 @@
 #             str(epoch): seed + 20_000 + epoch for epoch in range(1, epochs + 1)
 #         },
 #     }
-# 
-# 
+#
+#
 # def make_loader(dataset, batch_size: int, workers: int, seed: int, shuffle: bool):
 #     # Each invocation gets a fresh local RNG. Consuming one p run cannot affect another.
 #     return DataLoader(
 #         dataset, batch_size=batch_size, num_workers=workers, shuffle=shuffle,
 #         generator=torch.Generator().manual_seed(seed),
 #     )
-# 
-# 
+#
+#
 # def validate_colors(labels, colors, p: float) -> None:
 #     if labels.shape != colors.shape or not set(colors.tolist()) <= set(COLOR_IDS):
 #         raise ValueError("Invalid color assignment shape or color IDs.")
@@ -92,8 +92,8 @@
 #         # Nearest-integer allocation permits at most half an image of rounding.
 #         if abs(aligned - count * p) > 0.5 + 1e-9:
 #             raise ValueError(f"Digit {digit}: actual alignment does not match p={p}.")
-# 
-# 
+#
+#
 # def prepare_seed(digit_train, seed: int, epochs: int) -> dict:
 #     splits = split_exposure_recovery_validation(digit_train, seed)
 #     repeated = split_exposure_recovery_validation(digit_train, seed)
@@ -132,8 +132,8 @@
 #             for name, subset in zip(("exposure", "recovery", "validation"), splits)
 #         },
 #     }
-# 
-# 
+#
+#
 # def reset_adam(model, exposure_optimizer):
 #     """Discard all accumulated Adam moments and steps, preserving model parameters."""
 #     before = state_hash(model.state_dict())
@@ -143,8 +143,8 @@
 #     if state_hash(model.state_dict()) != before:
 #         raise ValueError("Optimizer reset changed model weights.")
 #     return optimizer
-# 
-# 
+#
+#
 # def evaluate(model, aligned, conflict, device) -> dict:
 #     values = evaluate_binary(model, aligned, conflict, device)
 #     values["abs_shortcut_gap"] = abs(values["shortcut_gap"])
@@ -156,8 +156,8 @@
 #         if not math.isfinite(values[name]) or not lower <= values[name] <= 1.0:
 #             raise ValueError(f"Metric out of range: {name}={values[name]}")
 #     return values
-# 
-# 
+#
+#
 # def summarize(rows: list[dict]) -> list[dict]:
 #     groups = defaultdict(list)
 #     for row in rows:
@@ -174,8 +174,8 @@
 #             result[f"{metric}_std"] = statistics.stdev(values) if len(values) > 1 else None
 #         summaries.append(result)
 #     return summaries
-# 
-# 
+#
+#
 # def save_summary(rows: list[dict], run_dir: Path) -> list[dict]:
 #     summary = summarize(rows)
 #     if summary:
@@ -186,13 +186,13 @@
 #             writer.writerows(summary)
 #         temporary.replace(run_dir / "summary_results.csv")
 #     return summary
-# 
-# 
+#
+#
 # def plot_results(summary: list[dict], run_dir: Path) -> None:
 #     import matplotlib
 #     matplotlib.use("Agg")
 #     import matplotlib.pyplot as plt
-# 
+#
 #     plot_dir = run_dir / "plots"
 #     plot_dir.mkdir(exist_ok=True)
 #     for metric, filename, label in (
@@ -223,8 +223,8 @@
 #         fig.tight_layout()
 #         fig.savefig(plot_dir / f"{filename}.png", dpi=150)
 #         plt.close(fig)
-# 
-# 
+#
+#
 # def run_condition(args, config, run_dir, seed, p, prepared, device, record):
 #     exposure, recovery, validation = prepared["splits"]
 #     assignments = prepared["assignments"]
@@ -251,7 +251,7 @@
 #     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 #     print(f"[seed {seed} | p {p:g}] exposure (1 epoch)", flush=True)
 #     exposure_loss, exposure_accuracy = train_one_epoch(model, exposure_loader, optimizer, device)
-# 
+#
 #     def evaluate_and_record(epoch, loss=None, accuracy=None):
 #         values = evaluate(model, *val_loaders, device)
 #         if any(value is not None and not math.isfinite(value)
@@ -275,7 +275,7 @@
 #         print(f"[seed {seed} | p {p:g}] recovery epoch {epoch}/{args.recovery_epochs} "
 #               f"neutral={values['neutral_accuracy']:.4f} gap={values['shortcut_gap']:.4f} "
 #               f"flip={values['flip_rate']:.4f} score={values['recovery_score']:.4f}", flush=True)
-# 
+#
 #     evaluate_and_record(0)
 #     optimizer = reset_adam(model, optimizer)
 #     for epoch in range(1, args.recovery_epochs + 1):
@@ -287,8 +287,8 @@
 #                              plan["recovery_shuffle_seeds"][str(epoch)], True)
 #         loss, accuracy = train_one_epoch(model, loader, optimizer, device)
 #         evaluate_and_record(epoch, loss, accuracy)
-# 
-# 
+#
+#
 # def parse_args(argv=None):
 #     parser = argparse.ArgumentParser(description=__doc__)
 #     parser.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])
@@ -312,8 +312,8 @@
 #     if args.num_threads is not None and args.num_threads < 1:
 #         parser.error("num-threads must be positive.")
 #     return args
-# 
-# 
+#
+#
 # def main(argv=None) -> Path:
 #     args = parse_args(argv)
 #     if args.num_threads is not None:
@@ -342,21 +342,21 @@
 #     (run_dir / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
 #     print(f"saved={run_dir.resolve()} | device={device}", flush=True)
 #     rows, split_indices = [], {}
-# 
+#
 #     def status(state, **extra):
 #         (run_dir / "status.json").write_text(json.dumps({
 #             "status": state, "completed_evaluations": len(rows),
 #             "expected_evaluations": len(args.seeds) * len(args.p_values) * (args.recovery_epochs + 1),
 #             **extra,
 #         }, indent=2), encoding="utf-8")
-# 
+#
 #     status("running")
 #     try:
 #         digit_train, _ = load_digit38_mnist(root=str(args.data_root), download=args.download)
 #         with (run_dir / "raw_results.csv").open("w", newline="", encoding="utf-8-sig") as handle:
 #             writer = csv.DictWriter(handle, fieldnames=FIELDS)
 #             writer.writeheader()
-# 
+#
 #             def record(row):
 #                 writer.writerow(row)
 #                 handle.flush()
@@ -364,7 +364,7 @@
 #                 rows.append(row)
 #                 save_summary(rows, run_dir)
 #                 status("running")
-# 
+#
 #             for seed in args.seeds:
 #                 prepared = prepare_seed(digit_train, seed, args.recovery_epochs)
 #                 split_indices[seed] = prepared["indices"]
@@ -380,7 +380,7 @@
 #         raise
 #     status("complete")
 #     return run_dir
-# 
-# 
+#
+#
 # if __name__ == "__main__":
 #     main()

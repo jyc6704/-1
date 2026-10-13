@@ -1,0 +1,9 @@
+{
+  "prediction_metrics_recomputed": 480,
+  "expected_observations": 480,
+  "missing_observations": 0,
+  "complete": true,
+  "raw_source_checksums_verified": true,
+  "paired_design_verified": true,
+  "tolerance": 1e-12
+}

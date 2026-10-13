@@ -2,7 +2,7 @@
 # Origin: GitHub 6105e71191aa85fd57bdf9901f0f074109ba0998: experiment_data.py
 # """Immutable source archives, exact-duplicate audit, paired ten-color design."""
 # from __future__ import annotations
-# 
+#
 # import hashlib
 # import gzip
 # from pathlib import Path
@@ -13,13 +13,13 @@
 # import torch
 # from torchvision.datasets import MNIST, EMNIST
 # from torchvision.datasets.utils import download_url
-# 
+#
 # from experiment_io import atomic, digest, read_json, save_npz, stable_seed, write_json
-# 
-# 
+#
+#
 # def ensure_emnist_digits(data_root, download):
 #     """Verify the official ZIP, then stream only the four Digits IDX members.
-# 
+#
 #     torchvision's generic downloader also expands all unused letter/byclass splits.
 #     Avoid that multi-GB expansion and its whole-file decompression buffers.
 #     """
@@ -51,8 +51,8 @@
 #             if not valid(raw/name,required[name]):raise ValueError('Invalid extracted EMNIST IDX: '+name)
 #     # This function's own download is redundant once all Digits files are intact.
 #     if not existed:archive.unlink()
-# 
-# 
+#
+#
 # def load_source(name, data_root, download=True):
 #     if name == 'emnist_digits':
 #         ensure_emnist_digits(data_root,download)
@@ -64,12 +64,12 @@
 #         ds = cls(root=str(data_root), train=train, download=download, **extra)
 #         result[split] = (ds.data.numpy().astype(np.uint8), ds.targets.numpy().astype(np.int64))
 #     return result
-# 
-# 
+#
+#
 # def hashes(images):
 #     return [hashlib.sha256(im.tobytes()).hexdigest() for im in images]
-# 
-# 
+#
+#
 # def archive_source(root, name, source):
 #     """Store loader-native pixels/labels in <16MB uncompressed shards, once."""
 #     folder = root / 'raw_sources' / name
@@ -98,8 +98,8 @@
 #             'pixels': 'uint8, loader-native orientation; labels 0..9; ids are official split indices'}
 #     write_json(folder / 'manifest.json', info)
 #     return info
-# 
-# 
+#
+#
 # def balanced_subset(ids, labels, limit, seed):
 #     if limit is None or limit >= len(ids):
 #         return ids
@@ -110,8 +110,8 @@
 #     counts = [min(len(a), limit//10 + (y < limit%10)) for y,a in enumerate(parts)]
 #     result = np.concatenate([a[:n] for a,n in zip(parts,counts)])
 #     return np.sort(result)
-# 
-# 
+#
+#
 # def prepare_source(root, name, source, limit=None):
 #     manifest = archive_source(root, name, source)
 #     images, labels = source['train']
@@ -149,16 +149,16 @@
 #     return {'images': torch.from_numpy(images), 'labels': labels, 'ids': ids,
 #             'test_images': torch.from_numpy(test_images), 'test_labels': test_labels, 'test_ids': test_ids,
 #             'manifest': manifest, 'audit': audit}
-# 
-# 
+#
+#
 # def apportion(counts, total):
 #     quota = np.asarray(counts,dtype=float) * total / sum(counts)
 #     n = np.floor(quota).astype(int)
 #     for i in np.argsort(-(quota-n), kind='stable')[:total-int(n.sum())]:
 #         n[i] += 1
 #     return n
-# 
-# 
+#
+#
 # def split_sources(ids, labels, seed):
 #     rng = np.random.default_rng(seed)
 #     groups = [rng.permutation(ids[labels[ids] == y]) for y in range(10)]
@@ -175,8 +175,8 @@
 #     if any(set(labels[a]) != set(range(10)) for a in result.values()):
 #         raise ValueError('Every split must contain all 10 digits.')
 #     return result
-# 
-# 
+#
+#
 # def assign_colors(labels, p, permutation, seed):
 #     rng = np.random.default_rng(seed)
 #     out = np.empty(len(labels),dtype=np.uint8)
@@ -193,8 +193,8 @@
 #                                      np.tile(rest,(len(ids)-aligned+8)//9)[:len(ids)-aligned]])
 #         out[ids] = colors
 #     return out
-# 
-# 
+#
+#
 # def validate_colors(labels, colors, p, permutation):
 #     table = np.zeros((10,10),dtype=int)
 #     for y in range(10):
@@ -209,8 +209,8 @@
 #                 raise ValueError('Biased color probabilities incorrect.')
 #         table[y] = row
 #     return table.tolist()
-# 
-# 
+#
+#
 # def palette(hue):
 #     h = ((np.arange(10)[None,:]*36 + hue[:,None]) % 360)/60
 #     x = 1-np.abs(h%2-1)
@@ -218,8 +218,8 @@
 #     g = np.where((h>=1)&(h<3),1,np.where((h<1)|((h>=3)&(h<4)),x,0))
 #     b = np.where((h>=3)&(h<5),1,np.where(((h>=2)&(h<3))|(h>=5),x,0))
 #     return torch.from_numpy(np.stack([r,g,b],axis=-1).astype(np.float32))
-# 
-# 
+#
+#
 # def shared_design(root, name, source, seed, epochs, p_values):
 #     folder = root/'shared'/name/f'seed{seed}'
 #     pi = np.random.default_rng(stable_seed(seed,'permutation')).permutation(10)

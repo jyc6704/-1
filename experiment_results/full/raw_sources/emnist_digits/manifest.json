@@ -1,0 +1,92 @@
+{
+  "dataset": "emnist_digits",
+  "files": [
+    {
+      "file": "raw_sources/emnist_digits/train_000000.npz",
+      "sha256": "d2919b398906178e97189f33d005992e2145206a705dd8eb3b16deff2c666623",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_020000.npz",
+      "sha256": "31a9c62cdfc01ba8f877fad4fe456d6506933e7b134b1a754839a26d25a3857c",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_040000.npz",
+      "sha256": "df4f6bb79e6fa165cc76b2755d654c16f2f137e167afb8e0a3359a89d9c8af0d",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_060000.npz",
+      "sha256": "c076a735f6dca6268acfc987f856757d1aba1db92c63ad6e1150b790b0e46664",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_080000.npz",
+      "sha256": "9cd50f777dc803179f7585c8201857cd9cd80005cd071da9b13507c9f83f885f",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_100000.npz",
+      "sha256": "0894954e070223df3207e83efd89b1b99687c91d8a79ea56fcbcc26f082d97df",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_120000.npz",
+      "sha256": "964e68095a69cbb868c9cffc554a80cd29ced443da9a834dfd526490a7d46f1e",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_140000.npz",
+      "sha256": "dbcd4426b7ac72f7793b043f408d0928a9dcb1a5d26ff0dc3dc97e8f01c1756c",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_160000.npz",
+      "sha256": "682d3cfa482af234be36882656169af2780873818a1eed540e71f1e918bda81c",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_180000.npz",
+      "sha256": "a08ad9c2c85907c704430c65f133b399ed2e51dad26ddb1d75f56061ef2a3d61",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_200000.npz",
+      "sha256": "5ab3589e6215f3742139fe2ae05133385561a5a28c08e25c1e458bdba3eb9644",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/train_220000.npz",
+      "sha256": "9f928c6b6d9a2100506e3716fc404ff38894eb4398c8b129abc1f3b2e0ba9f80",
+      "split": "train",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/test_000000.npz",
+      "sha256": "afb36d985654504668fc99de43e23d87e3a45ef93b4428ac4418818e1862ad75",
+      "split": "test",
+      "count": 20000
+    },
+    {
+      "file": "raw_sources/emnist_digits/test_020000.npz",
+      "sha256": "9ce15d05001c158bba19ca067081de2400d5f43cc282842d2b4d46cab93df93b",
+      "split": "test",
+      "count": 20000
+    }
+  ],
+  "orientation": "transpose H/W after loading",
+  "source": "torchvision.datasets.EMNIST(split=digits)",
+  "pixels": "uint8, loader-native orientation; labels 0..9; ids are official split indices"
+}
