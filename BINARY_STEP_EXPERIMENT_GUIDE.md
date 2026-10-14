@@ -1,6 +1,12 @@
 # 콜로퀴움 이후: 3·8 이진분류 step 단위 편향 회복 실험
 
-새 실행 파일: `binary_step_experiment.py` (기존 `experiment.py`, `recovery_experiment.py` 변경 없음)
+step 실행 파일: `binary_step_experiment.py`. 기존 epoch 실행기 `recovery_experiment.py`와
+함께 사용하며, 10클래스 재현용 `experiment.py`도 유지한다.
+
+두 이진 실행기는 `metrics.py::recovery_score()`와
+`recovery_metrics.py::calculate_q_recovery()`를 공유한다. 데이터 분할·초기화·학습 순서는
+각 실행기의 기존 설계를 유지한다. step 실험은 정확히 같은 이미지의 중복을 정리하고
+숫자별 비율을 맞춰 분할하므로, 같은 seed의 epoch 실험과 동일한 학습 경로는 아니다.
 
 ## 1. 무엇이 바뀌었나
 
@@ -40,7 +46,9 @@
 
 ## 2. 실행
 
-기존 저장소의 루트(`experiment.py`, `model.py`, `experiment_data.py` 등이 있는 폴더)에 세 파일을 추가한다. Python 3.10 이상을 이용한다.
+병합된 저장소의 루트에서 실행한다. `binary_step_experiment.py`와 공통 모듈
+`experiment_data.py`, `experiment_io.py`, `model.py`, `metrics.py`, `recovery_metrics.py`가
+함께 필요하다. Python 3.10 이상을 이용한다.
 
 ```powershell
 python -m pip install -r requirements-experiment.txt
@@ -72,6 +80,9 @@ python binary_step_experiment.py --offline
 
 **중단 후 같은 명령을 다시 실행하면 저장된 체크포인트에서 재개**한다. `--checkpoint-every-steps 25`가 기본값이며, 매 epoch 종료와 노출→회복 전환 시에도 체크포인트를 기록한다. 따라서 정상 종료 이전 강제 종료에서는 마지막 체크포인트 이후의 학습·평가 최대 24 step을 재실행할 수 있다. 저장된 결과를 중복으로 기록하지는 않는다. 이 옵션을 바꾼 재실행은 프로토콜 불일치로 거부하므로 **같은 값을 유지**한다.
 
+공통 지표 모듈도 코드 해시와 실행 당시 코드 사본에 포함한다. 병합 전 코드로 시작한
+실험은 해당 코드를 복원해 재개하거나, 병합된 코드에서 새 `--output` 폴더를 사용한다.
+
 ```powershell
 # 학습 없이 예측값 검산 후 CSV·그래프 재생성
 python binary_step_experiment.py --analyze-only
@@ -81,6 +92,13 @@ python binary_step_experiment.py --publish
 ```
 
 `--analyze-only`는 기본 `experiment_results/binary_step_full`에 동작한다. 별도 결과 폴더를 사용했다면 해당 `--output`도 지정해야 한다. `--publish`는 완전히 끝나고 검산된 결과만 다루며, 로컬 Git 인증/remote 환경이 필요하다. 용량과 파일 수가 상당히 커질 수 있으므로 업로드 전 저장 공간과 Git 리포지토리 크기를 확인한다. `--smoke` 결과는 정식 논문 결과로 사용하지 않으며 publish도 허용하지 않는다.
+
+부분 결과를 분석할 때도 대조군의 **설정된 최종 step**만 Q_ref로 사용한다.
+대조군이 아직 끝나지 않았으면 Q_ref와 회복률을 비워 두고
+`recovery_percent_status=reference_incomplete`로 기록한다. 대조군 자체가 없으면
+`reference_missing`이다. `reference_recovery_step`은 실제 선택한 최종 기준 시점이다.
+동일 시점 대조군과의 격차는 해당 관측이 있으면 별도로 계산한다.
+중복 관측, 중간 step 누락, 공유 데이터 설계·초기 모델 불일치는 분석을 중단한다.
 
 ## 3. 저장되는 데이터
 

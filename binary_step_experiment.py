@@ -37,6 +37,8 @@ from experiment_io import (
     verify_manifest, write_csv, write_json, write_manifest, write_text,
 )
 from model import BinarySmallCNN
+from metrics import recovery_score
+from recovery_metrics import calculate_q_recovery, probability
 
 HERE = Path(__file__).resolve().parent
 SOURCE_NAME = "mnist_38"  # Legacy constant; run names are selected with --datasets
@@ -50,7 +52,8 @@ METRICS = (
     "conflict_accuracy", "neutral_accuracy", "shortcut_gap", "abs_shortcut_gap",
     "flip_rate", "recovery_score", "digit3_q", "digit8_q",
 )
-CODE_FILES = ["binary_step_experiment.py", "experiment_data.py", "experiment_io.py", "model.py"]
+CODE_FILES = ["binary_step_experiment.py", "experiment_data.py", "experiment_io.py",
+              "model.py", "metrics.py", "recovery_metrics.py"]
 
 
 class PlannedStop(Exception):
@@ -203,7 +206,7 @@ def binary_metrics(predictions, digits):
     return {"mean_color_accuracy": mean, "all_colors_accuracy": q,
             "aligned_accuracy": aligned, "conflict_accuracy": conflict,
             "neutral_accuracy": mean, "shortcut_gap": gap, "abs_shortcut_gap": abs(gap),
-            "flip_rate": flip, "recovery_score": mean * (1-abs(gap))*(1-flip),
+            "flip_rate": flip, "recovery_score": recovery_score(mean, gap, flip),
             "digit3_q": float(right[ys == 3].all(axis=1).mean()) if (ys == 3).any() else None,
             "digit8_q": float(right[ys == 8].all(axis=1).mean()) if (ys == 8).any() else None}
 
@@ -436,28 +439,76 @@ def all_observations(root):
                                         r["p"],r["seed"],r["recovery_step"]))
 
 
-def derive(rows, protocol):
-    """R_Q uses each dataset/seed/exposure's own neutral p=.5 final Q."""
+def validate_observations(rows, protocol, complete=False):
+    """Validate paired sources and observed steps before deriving recovery rates."""
+    for field in ("recovery_epochs", "batch_size"):
+        if type(protocol[field]) is not int or protocol[field] < 1:
+            raise ValueError(f"Invalid protocol value: {field}")
     keys = ("dataset", "split", "seed", "exposure_epochs", "p", "recovery_step")
-    by_key = {tuple(r[k] for k in keys): r for r in rows}
-    final_control = {}
-    for r in rows:
-        if r["p"] != .5:
-            continue
-        k = (r["dataset"], r["split"], r["seed"], r["exposure_epochs"])
-        if k not in final_control or r["recovery_step"] > final_control[k]["recovery_step"]:
-            final_control[k] = r
+    expected_paths = {(d+"_38", s, e, p) for d in protocol["datasets"]
+                      for s in protocol["seeds"] for e in protocol["exposure_epochs"]
+                      for p in protocol["p_values"]}
+    indexed, groups, paired, final_steps = {}, defaultdict(set), {}, {}
+    for row in rows:
+        key = tuple(row[k] for k in keys)
+        dataset, split, seed, exposure, p, step = key
+        if (dataset, seed, exposure, p) not in expected_paths or split not in ("validation", "test"):
+            raise ValueError(f"Observation outside configured conditions: {key}")
+        if key in indexed:
+            raise ValueError(f"Duplicate observation: {key}")
+        if type(step) is not int or step < 0:
+            raise ValueError(f"Invalid recovery step: {key}")
+        for field in ("num_exposure", "num_recovery", "num_sources"):
+            if type(row[field]) is not int or row[field] < 1:
+                raise ValueError(f"Invalid source count: {field}")
+        if row["num_colors"] != 2:
+            raise ValueError("Binary recovery requires two evaluation colors.")
+        probability(row["all_colors_accuracy"], "all_colors_accuracy")
+        final = protocol["recovery_epochs"] * math.ceil(row["num_recovery"] / protocol["batch_size"])
+        if step > final or (split == "test" and step not in (0, final)):
+            raise ValueError(f"Unexpected recovery step: {key}")
+        # All p/exposure lengths within this dataset/seed use the same design.
+        pair_key = (dataset, split, seed)
+        signature = tuple(row[field] for field in (
+            "initial_model_sha256", "design_sha256", "num_exposure", "num_recovery", "num_sources"))
+        if pair_key in paired and paired[pair_key] != signature:
+            raise ValueError(f"Paired source/model conditions differ: {pair_key}")
+        paired[pair_key] = signature
+        indexed[key] = row
+        groups[key[:-1]].add(step)
+        final_steps[key[:-1]] = final
+    for group, steps in groups.items():
+        final = final_steps[group]
+        if group[1] == "validation":
+            expected = set(range((final if complete else max(steps)) + 1))
+        else:
+            expected = {0, final} if complete else {0, max(steps)}
+        if steps != expected:
+            raise ValueError(f"Missing recovery steps: {group}")
+    if complete:
+        expected_groups = {(d, split, s, e, p) for d, s, e, p in expected_paths
+                           for split in ("validation", "test")}
+        if set(groups) != expected_groups:
+            raise ValueError("Configured condition/control or evaluation split is missing.")
+    return indexed, final_steps
+
+
+def derive(rows, protocol, complete=False):
+    """Use only the planned final control, never the last available partial step."""
+    by_key, final_steps = validate_observations(rows, protocol, complete)
     out = []
     for row in rows:
         r = dict(row)
-        dataset, split, seed, exp, p = (row[k] for k in keys[:-1])
+        dataset, split, seed, exp, p = (row[k] for k in (
+            "dataset", "split", "seed", "exposure_epochs", "p"))
         same = (dataset, split, seed, exp)
         base = by_key.get((*same, p, 0))
-        reference = final_control.get(same)
+        reference = by_key.get((*same, .5, final_steps[(*same, p)]))
         control_at_step = by_key.get((*same, .5, row["recovery_step"]))
         q = row["all_colors_accuracy"]
         r["q_initial"] = base["all_colors_accuracy"] if base else None
         r["q_reference"] = reference["all_colors_accuracy"] if reference else None
+        r["reference_recovery_step"] = reference["recovery_step"] if reference else None
         r["q_gap_same_step_pp"] = (100 * (control_at_step["all_colors_accuracy"]-q)
                                     if control_at_step else None)
         if p == .5:
@@ -465,14 +516,11 @@ def derive(rows, protocol):
             r["recovery_percent_status"] = "neutral_control"
         elif base is None or reference is None:
             r["q_recovery_percent"] = None
-            r["recovery_percent_status"] = "reference_missing"
-        elif reference["all_colors_accuracy"] - base["all_colors_accuracy"] <= .001:
-            r["q_recovery_percent"] = None
-            r["recovery_percent_status"] = "initial_gap_too_small_or_nonpositive"
+            r["recovery_percent_status"] = (
+                "reference_incomplete" if (*same, .5, 0) in by_key else "reference_missing")
         else:
-            r["q_recovery_percent"] = 100*(q-base["all_colors_accuracy"]) / (
-                reference["all_colors_accuracy"] - base["all_colors_accuracy"])
-            r["recovery_percent_status"] = "available"
+            r["q_recovery_percent"], r["recovery_percent_status"] = calculate_q_recovery(
+                q, base["all_colors_accuracy"], reference["all_colors_accuracy"])
         out.append(r)
     return out
 
@@ -484,6 +532,8 @@ def summarize(rows):
                 row["recovery_step"])].append(row)
     result = []
     for (dataset,split,exposure,p,step),group in sorted(groups.items()):
+        if len({r["seed"] for r in group}) != len(group):
+            raise ValueError("Duplicate seed in summary group.")
         r = {"dataset":dataset,"split":split,"exposure_epochs":exposure,"p":p,
              "recovery_step":step,
              "recovery_epoch_mean":statistics.mean(x["actual_recovery_epoch"] for x in group),
@@ -586,9 +636,9 @@ def plot_results(root, summary, protocol):
 
 def build_report(root, protocol, complete=False):
     rows=all_observations(root)
+    derived=derive(rows,protocol,complete=complete)
     write_csv(root/"raw"/"observations.csv",rows)
     verification=verify_predictions(root,rows)
-    derived=derive(rows,protocol)
     summary=summarize(derived)
     write_csv(root/"processed"/"derived_results.csv",derived)
     write_csv(root/"processed"/"per_digit_results.csv",[
@@ -624,20 +674,6 @@ def build_report(root, protocol, complete=False):
     verification.update({"status":"complete" if complete else "partial",
                          "observed_validation":sum(r["split"]=="validation" for r in rows),
                          "observed_test":sum(r["split"]=="test" for r in rows)})
-    if complete:
-        expected_paths=len(protocol["datasets"])*len(protocol["seeds"])*len(protocol["exposure_epochs"])*len(protocol["p_values"])
-        run_groups=defaultdict(list)
-        for r in rows:run_groups[r["run_id"]].append(r)
-        if len(run_groups)!=expected_paths:
-            raise ValueError("Some configured dataset/seed/exposure/p paths are missing.")
-        for run_id,group in run_groups.items():
-            valid=[r for r in group if r["split"]=="validation"]
-            test=[r for r in group if r["split"]=="test"]
-            n=protocol["recovery_epochs"]*math.ceil(valid[0]["num_recovery"]/protocol["batch_size"])
-            if len(valid)!=n+1 or {r["recovery_step"] for r in valid}!=set(range(n+1)):
-                raise ValueError(f"Missing/duplicate validation recovery steps: {run_id}")
-            if len(test)!=2 or {r["recovery_step"] for r in test}!={0,n}:
-                raise ValueError(f"Missing official test endpoints: {run_id}")
     write_json(root/"processed"/"verification.json",verification)
     plot_results(root,summary,protocol)
     lines=["# 이진분류 step 단위 회복 실험 분석 안내","",

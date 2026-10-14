@@ -134,6 +134,20 @@ def calculate_scores(row: dict, num_classes: int | None, num_colors: int | None)
     }
 
 
+def calculate_q_recovery(q: float, q_initial: float, q_reference: float,
+                         min_initial_gap: float = 0.001) -> tuple[float | None, str]:
+    """Epoch/step 실험이 공유하는 Q 회복률. 음수와 100% 초과도 보존한다."""
+    if not math.isfinite(min_initial_gap) or min_initial_gap < 0:
+        raise ValueError("min_initial_gap은 유한한 0 이상의 값이어야 합니다.")
+    q = probability(q, "Q")
+    q_initial = probability(q_initial, "Q_initial")
+    q_reference = probability(q_reference, "Q_reference")
+    gap = q_reference - q_initial
+    if gap <= min_initial_gap:
+        return None, "initial_gap_too_small_or_nonpositive"
+    return 100 * (q - q_initial) / gap, "available"
+
+
 def calculate_recovery(current: dict, initial: dict | None = None,
                        reference: dict | None = None, min_initial_gap: float = 0.001) -> dict:
     """회복률은 %, 잔여 격차는 %p. 미정의 값은 None, 비율은 clipping하지 않는다."""
@@ -157,12 +171,9 @@ def calculate_recovery(current: dict, initial: dict | None = None,
     if initial is not None and reference is not None:
         gap = reference["all_colors_accuracy"] - initial["all_colors_accuracy"]
         result["q_initial_gap_pp"] = 100 * gap
-        if gap <= min_initial_gap:
-            result["recovery_status"] = "initial_gap_too_small_or_nonpositive"
-        else:
-            result["q_recovery_percent"] = 100 * (
-                current["all_colors_accuracy"] - initial["all_colors_accuracy"]) / gap
-            result["recovery_status"] = "available"
+        result["q_recovery_percent"], result["recovery_status"] = calculate_q_recovery(
+            current["all_colors_accuracy"], initial["all_colors_accuracy"],
+            reference["all_colors_accuracy"], min_initial_gap)
     return result
 
 

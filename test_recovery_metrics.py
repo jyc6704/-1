@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from recovery_metrics import (
     calculate_recovery, calculate_scores, color_scores_from_predictions, calculate_paired_recovery,
+    calculate_q_recovery,
 )
 
 
@@ -82,6 +83,22 @@ class PairedRecoveryTests(unittest.TestCase):
 
 
 class RecoveryMetricsTests(unittest.TestCase):
+    def test_shared_q_recovery_boundaries_and_invalid_values(self):
+        for q, expected in ((.55, 50), (.1, -100/7), (.95, 750/7)):
+            value, status = calculate_q_recovery(q, .2, .9)
+            self.assertAlmostEqual(value, expected)
+            self.assertEqual(status, "available")
+        for initial, reference in ((.9, .9), (.9, .8), (.2, .2005)):
+            self.assertEqual(calculate_q_recovery(.5, initial, reference),
+                             (None, "initial_gap_too_small_or_nonpositive"))
+        for values in ((float("nan"), .2, .9), (.5, -.1, .9),
+                       (.5, .2, float("inf")), (True, .2, .9)):
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                calculate_q_recovery(*values)
+        for threshold in (-1, float("nan")):
+            with self.assertRaises(ValueError):
+                calculate_q_recovery(.5, .2, .9, threshold)
+
     def test_binary_identity_against_every_pair(self):
         # 정답과 예측 조합을 직접 세어 수학적 복원식과 대조한다.
         for target, a, c in itertools.product(range(2), repeat=3):

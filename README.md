@@ -1,11 +1,35 @@
 # -1
 과제연구1
 
-## 현재 실행: 3·8 이진분류 회복 실험 (epoch 평가)
+## 이진분류 실험 실행 파일 선택
+
+로컬의 epoch 실험과 GitHub의 step 실험을 함께 사용할 수 있습니다.
+
+| 실행 파일 | 용도 | 기본 실험 범위 |
+|---|---|---|
+| `recovery_experiment.py` | 매 회복 epoch 종료 후 평가 | MNIST 3·8, 노출 1 epoch |
+| `binary_step_experiment.py` | 매 회복 업데이트 직후 평가, 중단 후 재개 지원 | MNIST·EMNIST 3·8, 노출 1·2·5·10 epoch |
+
+두 실행기는 `metrics.py`의 합성 점수와 `recovery_metrics.py`의 Q 회복률 수식을
+공유합니다. 데이터 분할, 초기화 난수와 평가 주기는 기존 실험별 방식을 유지하므로,
+같은 seed 번호라도 두 실행기의 원본·초기 가중치가 같다는 뜻은 아닙니다.
+
+```powershell
+# 전체 코드 검증: 합성 데이터만 사용하며 다운로드·외부 업로드 없음
+python -m unittest test_recovery_metrics test_recovery_experiment test_binary_step_experiment test_experiment
+
+# step 실험의 작은 실제 데이터 확인 (필요시 데이터 다운로드)
+python binary_step_experiment.py --smoke
+```
+
+step 실험의 설정·저장·재개는 [step 실험 안내](BINARY_STEP_EXPERIMENT_GUIDE.md)를 보세요.
+기존 결과는 각 실행기의 출력 폴더에 그대로 보존됩니다.
+
+## 3·8 이진분류 회복 실험 (epoch 평가)
 
 현재 진입점은 `python recovery_experiment.py`입니다. GitHub의 기존 이진 회복
 코드에 직접 측정한 Q와 시드별 중립 기준 모델 대비 회복률을 연결했습니다.
-step별 평가는 아직 추가하지 않았습니다. 아래 pilot 설명은 기존 편향 학습용입니다.
+이 실행기는 epoch별 평가를 유지합니다. 아래 pilot 설명은 기존 편향 학습용입니다.
 
 ```powershell
 # 기본: 3 seeds × 3 p, 편향 1 epoch + 회복 10 epochs
