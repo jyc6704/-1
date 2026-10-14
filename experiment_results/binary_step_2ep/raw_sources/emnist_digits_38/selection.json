@@ -1,0 +1,8 @@
+{
+  "selected_train_digit38": 48000,
+  "selected_test_digit38": 8000,
+  "source_name": "emnist_digits",
+  "official_split_separation": true,
+  "train_source_ids": "stored in shared/*/design.npz",
+  "original_full_source_archives": "raw_sources/emnist_digits/"
+}

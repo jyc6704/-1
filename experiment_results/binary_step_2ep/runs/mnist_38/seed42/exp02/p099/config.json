@@ -1,0 +1,17 @@
+{
+  "protocol_hash": "21053c82788570b1eb971449ea509f65c5715a75987688871a04ae6b0344b0fd",
+  "design_hash": "314490805fdec0e02157e294672352cd59dc4ccaeb9002992b730c494538e847",
+  "initial_model_sha256": "964e887b08f6e18caba03ef94bfc58714758ec5e54ccdec89ab724903df89e22",
+  "run_id": "mnist_38_s42_exp2_p099",
+  "dataset": "mnist_38",
+  "seed": 42,
+  "p": 0.99,
+  "exposure_epochs": 2,
+  "recovery_epochs": 5,
+  "num_exposure": 4792,
+  "num_recovery": 4792,
+  "num_validation": 2398,
+  "num_test": 1984,
+  "batch_size": 64,
+  "checkpoint_every_steps": 25
+}

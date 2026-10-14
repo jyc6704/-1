@@ -1,0 +1,14 @@
+{
+  "dataset": "emnist_digits",
+  "official_train": 240000,
+  "official_test": 40000,
+  "eligible_train": 240000,
+  "selected_train": 240000,
+  "selected_test": 40000,
+  "train_excluded_exact_duplicates": 0,
+  "test_exact_duplicate_count": 0,
+  "conflicting_train_duplicate_labels": [],
+  "policy": "Preserve official test; remove matching train pixels and keep first remaining train duplicate.",
+  "near_duplicates": "not certified",
+  "cross_dataset_overlap": "not measured; datasets never pooled"
+}

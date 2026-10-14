@@ -1,0 +1,8 @@
+{
+  "selected_train_digit38": 11982,
+  "selected_test_digit38": 1984,
+  "source_name": "mnist",
+  "official_split_separation": true,
+  "train_source_ids": "stored in shared/*/design.npz",
+  "original_full_source_archives": "raw_sources/mnist/"
+}

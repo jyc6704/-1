@@ -1,0 +1,9 @@
+{
+  "run_id": "mnist_38_s42_exp1_p090",
+  "training_complete": true,
+  "global_step": 450,
+  "recovery_step": 375,
+  "epoch_index": 6,
+  "next_batch": 0,
+  "updated_at": "2026-10-14T05:00:32.498177+00:00"
+}

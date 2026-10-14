@@ -1,0 +1,6 @@
+{
+  "completed_training_paths": 5,
+  "expected_paths": 72,
+  "last_run": "mnist_38/seed42/exp2/p090",
+  "updated_at": "2026-10-14T05:07:11.031652+00:00"
+}

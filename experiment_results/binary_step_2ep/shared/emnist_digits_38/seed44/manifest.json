@@ -1,0 +1,26 @@
+{
+  "seed": 44,
+  "source": "emnist_digits_38",
+  "design_sha256": "122e0d27bad2a95217dbccdbd8b845a242b381069d937ded0fca25fbac58cb9a",
+  "counts": {
+    "exposure": 19200,
+    "recovery": 19200,
+    "validation": 9600
+  },
+  "classes": [
+    3,
+    8
+  ],
+  "colors": [
+    3,
+    8
+  ],
+  "exposure_epochs": [
+    1,
+    2,
+    5,
+    10
+  ],
+  "recovery_epochs": 5,
+  "same_hue_per_source": true
+}

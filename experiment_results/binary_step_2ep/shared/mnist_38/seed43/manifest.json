@@ -1,0 +1,26 @@
+{
+  "seed": 43,
+  "source": "mnist_38",
+  "design_sha256": "3279077e04b67ab8dd1da6fed5f0196561655cfbc6f5eb88f944ce165f4276e4",
+  "counts": {
+    "exposure": 4792,
+    "recovery": 4792,
+    "validation": 2398
+  },
+  "classes": [
+    3,
+    8
+  ],
+  "colors": [
+    3,
+    8
+  ],
+  "exposure_epochs": [
+    1,
+    2,
+    5,
+    10
+  ],
+  "recovery_epochs": 5,
+  "same_hue_per_source": true
+}

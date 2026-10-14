@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "profile": "custom",
+  "datasets": [
+    "mnist",
+    "emnist_digits"
+  ],
+  "source_scope": "digits_3_and_8",
+  "digits": [
+    3,
+    8
+  ],
+  "colors": [
+    3,
+    8
+  ],
+  "target_mapping": {
+    "3": 0,
+    "8": 1
+  },
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "p_values": [
+    0.5,
+    0.9,
+    0.99
+  ],
+  "exposure_epochs": [
+    1,
+    2,
+    5,
+    10
+  ],
+  "recovery_epochs": 5,
+  "batch_size": 64,
+  "eval_batch_size": 512,
+  "checkpoint_every_steps": 25,
+  "model": "BinarySmallCNN",
+  "learning_rate": 0.001,
+  "optimizer": "Adam",
+  "loss": "CrossEntropyLoss",
+  "optimizer_reset_after_exposure": true,
+  "split_ratios": [
+    0.4,
+    0.4,
+    0.2
+  ],
+  "hue_jitter_degrees": 5.0,
+  "hue_baseline_degrees": [
+    108.0,
+    288.0
+  ],
+  "smoke_source_limit": null,
+  "device": "cpu",
+  "num_threads": 8,
+  "torch_version": "2.13.0+cpu",
+  "torchvision_version": "0.28.0+cpu",
+  "numpy_version": "2.4.6",
+  "python_version": "3.11.9",
+  "platform": "Windows",
+  "cuda_version": null,
+  "device_name": "cpu",
+  "precision": "float32; TF32 disabled",
+  "deterministic_algorithms": true,
+  "Q": "fraction of original images correctly classified with BOTH colors",
+  "flip_rate": "fraction of source images with different 3-vs-8 predictions between two colors",
+  "recovery_score": "M*(1-abs(shortcut_gap))*(1-flip_rate)",
+  "q_reference": "same seed, exposure length, split, neutral p=.5 at final recovery step",
+  "q_recovery_percent": "100*(Q_t-Q_0)/(Q_ref-Q_0); undefined for <=0.001 initial gap",
+  "code_sha256": {
+    "binary_step_experiment.py": "181ed27d235e5d5303a4286190e17b70707f31f4d91876ee89bbf00ac0f0d2b5",
+    "experiment_data.py": "7838f3070abcb70b7d9df8d7f89f4a9f19af8f233bc99b0469de4e8bd83eb9bf",
+    "experiment_io.py": "9aaab67f537f108c70487f084af138705f1d259b1599c4199e4d9543f2391a1c",
+    "model.py": "78f1dc2961dde969bd6bed81d5b209d861517e78173924fd217f0c87aba7d523"
+  },
+  "protocol_hash": "21053c82788570b1eb971449ea509f65c5715a75987688871a04ae6b0344b0fd"
+}
